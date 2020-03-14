@@ -1,0 +1,6 @@
+.idea
+.mypy_cache
+pyrunner
+*~
+__pycache__
+*.egg-info
