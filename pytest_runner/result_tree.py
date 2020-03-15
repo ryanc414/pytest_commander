@@ -6,7 +6,7 @@ in the UI and to update with test results as they are available.
 
 from __future__ import annotations
 import enum
-import os
+import textwrap
 from typing import Optional, List, Union
 
 
@@ -22,6 +22,7 @@ class TestStates(enum.Enum):
 
 class TestGroups(enum.Enum):
 
+    ROOT = enum.auto()
     PACKAGE = enum.auto()
     MODULE = enum.auto()
     CLASS = enum.auto()
@@ -35,19 +36,33 @@ class BranchNode:
     """
 
     def __init__(
-        self,
-        group_type: TestGroups,
-        name: str,
-        parent: Optional[BranchNode] = None,
-        children: Optional[List[Union[BranchNode, LeafNode]]] = None,
+        self, item, children: Optional[List[Union[BranchNode, LeafNode]]] = None,
     ):
-        self.group_type = group_type
-        self.name = name
-        self.parent = parent
+        self.parent = None
+        self.item = item
         self.children = children or []
         for child in self.children:
             child.parent = self
         self.status = TestStates.INIT
+
+    def __eq__(self, other: Union[BranchNode, LeafNode]) -> bool:
+        """Compare two BranchNodes for equality."""
+        if not isinstance(other, BranchNode):
+            return False
+
+        return self.item == other.item and self.children == other.children
+
+    def __repr__(self):
+        return f"BranchNode <{self.item} {self.status}>"
+
+    def pretty_format(self):
+        """Output a pretty-formatted string of the whole tree, for debug purposes."""
+        return "{}\n{}".format(
+            self,
+            textwrap.indent(
+                "\n".join(child.pretty_format() for child in self.children), prefix="  "
+            ),
+        )
 
 
 class LeafNode:
@@ -56,28 +71,46 @@ class LeafNode:
     as such, represents a test function or method.
     """
 
-    def __init__(self, name: str, parent: BranchNode = None):
-        self.name = name
-        self.parent = parent
+    def __init__(self, item):
+        self.item = item
         self.status = TestStates.INIT
 
+    def __eq__(self, other: Union[BranchNode, LeafNode]) -> bool:
+        """Compare two LeafNodes for equality."""
+        if not isinstance(other, LeafNode):
+            return False
 
-def full_path(tree_node: Union[BranchNode, LeafNode]) -> str:
-    """
-    Return the full path of a node in the tree from the root.
+        return self.item == other.item
 
-    E.g. test_module.py::TestSuite::test_method
-    """
-    if tree_node.parent is None:
-        return tree_node.name
+    def __repr__(self):
+        return f"LeafNode <{self.item} {self.status}"
 
-    separator = _get_separator(tree_node.parent.group_type)
-    parent_path = full_path(tree_node.parent)
-
-    return separator.join((parent_path, tree_node.name))
+    def pretty_format(self):
+        """Output a pretty-formatted string of the whole tree, for debug purposes."""
+        return str(self)
 
 
-def _get_separator(parent_type: TestGroups) -> str:
-    if parent_type == TestGroups.PACKAGE:
-        return os.path.sep
-    return "::"
+def build_from_session(session):
+    """Build a result tree from the PyTest session object."""
+    root = BranchNode(session)
+
+    for item in session.items:
+        collectors = item.listchain()[1:-1]
+        branch = _ensure_branch(root, collectors)
+        branch.children.append(LeafNode(item))
+
+    return root
+
+
+def _ensure_branch(node, collectors):
+    if not collectors:
+        return node
+
+    next_col, rest = collectors[0], collectors[1:]
+    for child in node.children:
+        if child.item == next_col:
+            return _ensure_branch(child, rest)
+
+    new_child = BranchNode(item=next_col)
+    node.children.append(new_child)
+    return _ensure_branch(new_child, rest)

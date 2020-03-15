@@ -1,30 +1,42 @@
 """Unit test for the result_tree package."""
 import os
 
+import pytest
+
 from pytest_runner import result_tree
 
 
-def test_full_path():
-    """Test getting the full path of a node in the tree."""
-    tree = result_tree.BranchNode(
-        group_type=result_tree.TestGroups.PACKAGE,
-        name="test_pkg",
-        children=[
-            result_tree.BranchNode(
-                group_type=result_tree.TestGroups.MODULE,
-                name="test_mod.py",
-                children=[
-                    result_tree.BranchNode(
-                        group_type=result_tree.TestGroups.CLASS,
-                        name="TestSuite",
-                        children=[result_tree.LeafNode(name="test_func")],
-                    )
-                ],
-            )
-        ],
-    )
+class CollectPlugin:
+    """Plugin to retrieve session object after collection."""
 
-    expected_path = "test_pkg{}test_mod.py::TestSuite::test_func".format(os.path.sep)
-    assert (
-        result_tree.full_path(tree.children[0].children[0].children[0]) == expected_path
-    )
+    def __init__(self):
+        self.session = None
+
+    def pytest_collection_finish(self, session):
+        self.session = session
+
+
+def collect_tests(directory):
+    plugin = CollectPlugin()
+    pytest.main(["--collect-only", directory], plugins=[plugin])
+
+    session = plugin.session
+    return result_tree.build_from_session(session)
+
+
+def test_build_from_session():
+    examples_dir = os.path.join(os.path.dirname(__file__), os.pardir, "pytest_examples")
+    tree = collect_tests(examples_dir)
+    expected_tree = """\
+BranchNode <<Session pytest_runner exitstatus=0 testsfailed=0 testscollected=6> TestStates.INIT>
+  BranchNode <<Module pytest_examples/test_a.py> TestStates.INIT>
+    LeafNode <<Function test_one> TestStates.INIT
+    LeafNode <<Function test_two> TestStates.INIT
+    BranchNode <<Class TestSuite> TestStates.INIT>
+      BranchNode <<Instance ()> TestStates.INIT>
+        LeafNode <<Function test_alpha> TestStates.INIT
+        LeafNode <<Function test_beta> TestStates.INIT
+  BranchNode <<Module pytest_examples/test_b.py> TestStates.INIT>
+    LeafNode <<Function test_one> TestStates.INIT
+    LeafNode <<Function test_two> TestStates.INIT"""
+    assert tree.pretty_format() == expected_tree
