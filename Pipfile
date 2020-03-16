@@ -6,10 +6,12 @@ verify_ssl = true
 [dev-packages]
 black = "*"
 pytest-runner = {editable = true,path = "."}
+mypy = "*"
 
 [packages]
 pytest = "*"
 flask = "*"
+marshmallow = "*"
 
 [requires]
 python_version = "3.8"

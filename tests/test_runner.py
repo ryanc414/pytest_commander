@@ -1,7 +1,10 @@
 """Unit tests for runner module."""
+import json
 import os
+from pprint import pprint
 
-from pytest_runner import runner
+from pytest_web_ui import runner
+from pytest_web_ui import result_tree
 
 
 def test_init():
@@ -11,20 +14,18 @@ def test_init():
     """
     directory = os.path.join(os.path.dirname(__file__), os.pardir, "pytest_examples")
     pyrunner = runner.PyTestRunner(directory)
-    expected_tree = """\
-BranchNode <<Session pytest_runner exitstatus=0 testsfailed=0 testscollected=6> TestStates.INIT>
-  BranchNode <<Module pytest_examples/test_a.py> TestStates.INIT>
-    LeafNode <<Function test_one> TestStates.INIT>
-    LeafNode <<Function test_two> TestStates.INIT>
-    BranchNode <<Class TestSuite> TestStates.INIT>
-      BranchNode <<Instance ()> TestStates.INIT>
-        LeafNode <<Function test_alpha> TestStates.INIT>
-        LeafNode <<Function test_beta> TestStates.INIT>
-  BranchNode <<Module pytest_examples/test_b.py> TestStates.INIT>
-    LeafNode <<Function test_one> TestStates.INIT>
-    LeafNode <<Function test_two> TestStates.INIT>"""
+    schema = result_tree.BranchNodeSchema()
+    serialized = schema.dump(pyrunner.result_tree)
+    pprint(serialized)
 
-    assert pyrunner.result_tree.pretty_format() == expected_tree
+    json_filepath = os.path.join(
+        os.path.dirname(__file__), os.pardir, "test_data", "result_tree_skeleton.json"
+    )
+
+    with open(json_filepath) as f:
+        expected_serialization = json.load(f)
+
+    assert serialized == expected_serialization
 
 
 def test_run_tests():
