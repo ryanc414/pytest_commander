@@ -7,7 +7,9 @@ in the UI and to update with test results as they are available.
 from __future__ import annotations
 import enum
 import textwrap
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Tuple, Dict
+
+from _pytest import nodes  # type: ignore
 
 
 class TestStates(enum.Enum):
@@ -36,33 +38,30 @@ class BranchNode:
     """
 
     def __init__(
-        self, item, children: Optional[List[Union[BranchNode, LeafNode]]] = None,
+        self,
+        collector: nodes.Collector,
+        children: Optional[List[Union[BranchNode, LeafNode]]] = None,
     ):
-        self.parent = None
-        self.item = item
+        self.pytest_node = collector
         self.children = children or []
-        for child in self.children:
-            child.parent = self
         self.status = TestStates.INIT
 
-    def __eq__(self, other: Union[BranchNode, LeafNode]) -> bool:
+    def __eq__(self, other: object) -> bool:
         """Compare two BranchNodes for equality."""
         if not isinstance(other, BranchNode):
             return False
 
-        return self.item == other.item and self.children == other.children
+        return self.pytest_node == other.pytest_node and self.children == other.children
 
-    def __repr__(self):
-        return f"BranchNode <{self.item} {self.status}>"
+    def __repr__(self) -> str:
+        return f"BranchNode <{self.pytest_node} {self.status}>"
 
-    def pretty_format(self):
+    def pretty_format(self) -> str:
         """Output a pretty-formatted string of the whole tree, for debug purposes."""
-        return "{}\n{}".format(
-            self,
-            textwrap.indent(
-                "\n".join(child.pretty_format() for child in self.children), prefix="  "
-            ),
+        formatted_children = textwrap.indent(
+            "\n".join(child.pretty_format() for child in self.children), prefix="  "
         )
+        return f"{self}\n{formatted_children}"
 
 
 class LeafNode:
@@ -71,46 +70,53 @@ class LeafNode:
     as such, represents a test function or method.
     """
 
-    def __init__(self, item):
-        self.item = item
+    def __init__(self, item: nodes.Item):
+        self.pytest_node = item
         self.status = TestStates.INIT
+        self.report = None
 
-    def __eq__(self, other: Union[BranchNode, LeafNode]) -> bool:
+    def __eq__(self, other: object) -> bool:
         """Compare two LeafNodes for equality."""
         if not isinstance(other, LeafNode):
             return False
 
-        return self.item == other.item
+        return self.pytest_node == other.pytest_node
 
-    def __repr__(self):
-        return f"LeafNode <{self.item} {self.status}"
+    def __repr__(self) -> str:
+        return f"LeafNode <{self.pytest_node} {self.status}>"
 
-    def pretty_format(self):
+    def pretty_format(self) -> str:
         """Output a pretty-formatted string of the whole tree, for debug purposes."""
         return str(self)
 
 
-def build_from_session(session):
+def build_from_session(
+    session: nodes.Session,
+) -> Tuple[BranchNode, Dict[str, LeafNode]]:
     """Build a result tree from the PyTest session object."""
     root = BranchNode(session)
+    index = {}
 
     for item in session.items:
         collectors = item.listchain()[1:-1]
         branch = _ensure_branch(root, collectors)
-        branch.children.append(LeafNode(item))
+        leaf = LeafNode(item)
+        branch.children.append(leaf)
+        index[item.nodeid] = leaf
 
-    return root
+    return root, index
 
 
-def _ensure_branch(node, collectors):
+def _ensure_branch(node: BranchNode, collectors: List[nodes.Collector]) -> BranchNode:
     if not collectors:
         return node
 
     next_col, rest = collectors[0], collectors[1:]
     for child in node.children:
-        if child.item == next_col:
+        if child.pytest_node == next_col:
+            assert isinstance(child, BranchNode)
             return _ensure_branch(child, rest)
 
-    new_child = BranchNode(item=next_col)
+    new_child = BranchNode(collector=next_col)
     node.children.append(new_child)
     return _ensure_branch(new_child, rest)
