@@ -2,6 +2,7 @@
 import json
 import os
 from pprint import pprint
+from unittest import mock
 
 from pytest_web_ui import runner
 from pytest_web_ui import result_tree
@@ -34,7 +35,9 @@ def test_run_tests():
     """
     directory = os.path.join(os.path.dirname(__file__), os.pardir, "pytest_examples")
     runner_inst = runner.PyTestRunner(directory)
-    runner_inst.run_tests("pytest_examples/test_a.py")
+    callback = mock.MagicMock()
+    runner_inst.run_tests("pytest_examples/test_a.py", callback)
+    assert callback.call_count == 5
 
     for test_id in (
         "test_one",

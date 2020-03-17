@@ -12,6 +12,7 @@ from typing import List, Tuple, Dict, Generator, Iterator, Optional
 
 import marshmallow
 from marshmallow import fields
+import marshmallow_enum
 from _pytest import nodes  # type: ignore
 
 
@@ -158,7 +159,7 @@ class LeafNode(Node):
         """
         if self.report is None:
             return self._status
-        return self.report.outcome
+        return TestState(self.report.outcome)
 
     @status.setter
     def status(self, new_status):
@@ -174,8 +175,9 @@ class LeafNode(Node):
 
     @property
     def longrepr(self) -> Optional[str]:
-        if self.report is None:
+        if self.report is None or self.report.longrepr is None:
             return None
+
         return str(self.report.longrepr)
 
     def pretty_format(self) -> str:
@@ -224,19 +226,22 @@ def _ensure_branch(
     return _ensure_branch(child, rest, nodes_index)
 
 
-class LeafNodeSchema(marshmallow.Schema):
-    """Serialization schema for leaf nodes."""
+class NodeSchema(marshmallow.Schema):
+    """Base schema for all nodes."""
 
     nodeid = fields.Str()
-    status = fields.Str()
+    status = marshmallow_enum.EnumField(TestState, by_value=True)
+
+
+class LeafNodeSchema(NodeSchema):
+    """Serialization schema for leaf nodes."""
+
     longrepr = fields.Str(allow_none=True)
 
 
-class BranchNodeSchema(marshmallow.Schema):
+class BranchNodeSchema(NodeSchema):
     """Serialization schema for branch nodes."""
 
-    nodeid = fields.Str()
-    status = fields.Str()
     child_branches = fields.Dict(
         fields.Str(), fields.Nested(lambda: BranchNodeSchema())
     )

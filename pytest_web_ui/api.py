@@ -1,6 +1,5 @@
 """HTTP API for PyTest runner."""
 import logging
-import queue
 from typing import Dict, Any, Tuple
 
 import flask

@@ -33,8 +33,35 @@ def test_report_skeleton(clients):
     assert rsp_json == expected_serialization
 
 
+_EXPECTED_RCVD = [
+    {
+        "args": [
+            {
+                "longrepr": None,
+                "nodeid": "pytest_examples/test_a.py::test_one",
+                "status": "running",
+            }
+        ],
+        "name": "update",
+        "namespace": "/",
+    },
+    {
+        "args": [
+            {
+                "longrepr": None,
+                "nodeid": "pytest_examples/test_a.py::test_one",
+                "status": "passed",
+            }
+        ],
+        "name": "update",
+        "namespace": "/",
+    },
+]
+
+
 def test_run_test(clients):
     flask_client, socket_client = clients
     socket_client.emit("run test", "pytest_examples/test_a.py::test_one")
     rcvd = socket_client.get_received()
     assert len(rcvd) == 2
+    assert rcvd == _EXPECTED_RCVD

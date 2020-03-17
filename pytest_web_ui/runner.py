@@ -1,11 +1,9 @@
 """PyTestRunner class and related functions."""
 import os
-import queue
 from typing import Tuple, Dict, Callable
 
 import pytest  # type: ignore
 from _pytest import reports
-import flask_socketio
 
 from . import result_tree
 
@@ -28,7 +26,7 @@ class PyTestRunner:
         """
         result_node = self._result_index[nodeid]
         result_node.status = result_tree.TestState.RUNNING
-        flask_socketio.emit("update", result_node)
+        updates_callback(result_node)
 
         def add_test_report(report: reports.TestReport):
             """Add a test report into our result tree."""

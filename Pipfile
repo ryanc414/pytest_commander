@@ -14,6 +14,7 @@ flask = "*"
 marshmallow = "*"
 flask-socketio = "*"
 eventlet = "*"
+marshmallow-enum = "*"
 
 [requires]
 python_version = "3.8"
