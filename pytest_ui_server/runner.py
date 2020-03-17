@@ -5,7 +5,7 @@ from typing import Tuple, Dict, Callable
 import pytest  # type: ignore
 from _pytest import reports  # type: ignore
 
-from . import result_tree
+from pytest_ui_server import result_tree
 
 
 class PyTestRunner:

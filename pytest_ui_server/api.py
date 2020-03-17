@@ -1,23 +1,35 @@
 """HTTP API for PyTest runner."""
 import logging
+import os
 from typing import Dict, Any, Tuple
 
 import flask
 import flask_socketio  # type: ignore
 
-from . import runner
-from . import result_tree
+from pytest_ui_server import runner
+from pytest_ui_server import result_tree
 
 LOGGER = logging.getLogger(__name__)
 
 
 def build_app(directory: str) -> Tuple[flask.Flask, flask_socketio.SocketIO]:
     """Build a Flask app to serve the API and static files."""
-    app = flask.Flask(__name__)
+    build_dir = os.path.join(os.path.dirname(__file__), os.pardir, "pytest_web_ui", "build")
+    index_file = os.path.join(build_dir, "index.html")
+
+    app = flask.Flask(__name__, root_path=build_dir)
     test_runner = runner.PyTestRunner(directory)
     branch_schema = result_tree.BranchNodeSchema()
     leaf_schema = result_tree.LeafNodeSchema()
     socketio = flask_socketio.SocketIO(app)
+
+    @app.route("/")
+    def index():
+        return flask.send_file(index_file)
+    
+    @app.route('/js/<path:path>')
+    def send_build(path):
+        return flask.send_from_directory(path)
 
     @app.route("/api/v1/result-tree")
     def tree() -> Dict[str, Any]:
