@@ -12,7 +12,7 @@ from typing import List, Tuple, Dict, Generator, Iterator, Optional
 
 import marshmallow
 from marshmallow import fields
-import marshmallow_enum
+import marshmallow_enum  # type: ignore
 from _pytest import nodes  # type: ignore
 
 
@@ -26,6 +26,7 @@ class TestState(enum.Enum):
     RUNNING = "running"
 
 
+# A parent entry will inherit the highest precedence state from its children.
 _TEST_STATE_PRECEDENT = {
     TestState.INIT: 1,
     TestState.SKIPPED: 2,
@@ -53,20 +54,35 @@ class Node(abc.ABC):
     @property
     @abc.abstractmethod
     def nodeid(self) -> str:
+        """Return the unique ID for this node."""
         raise NotImplementedError
 
     @property
-    @abc.abstractmethod
     def status(self) -> TestState:
-        raise NotImplementedError
+        """Property getter for current status."""
+        return self._get_status()
 
     @status.setter
-    @abc.abstractmethod
     def status(self, new_status: TestState):
+        """"Property setter for current node status."""
+        self._set_status(new_status)
+
+    @abc.abstractmethod
+    def _get_status(self) -> TestState:
+        """Get the current status of this node."""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def _set_status(self, new_status: TestState):
+        """Set the current status of this node."""
         raise NotImplementedError
 
     @abc.abstractmethod
     def pretty_format(self) -> str:
+        """
+        Format this node and its children recursively as a multi-line string, for debug
+        purposes.
+        """
         raise NotImplementedError
 
 
@@ -89,9 +105,10 @@ class BranchNode(Node):
         if not isinstance(other, BranchNode):
             return False
 
-        return self._pytest_node == other._pytest_node
+        return self.nodeid == other.nodeid
 
     def __repr__(self) -> str:
+        """String representation of this node."""
         return f"BranchNode <{self._pytest_node} {self.status}>"
 
     def pretty_format(self) -> str:
@@ -114,13 +131,11 @@ class BranchNode(Node):
         """Unique ID of this node, used for indexing."""
         return self._pytest_node.nodeid
 
-    @property
-    def status(self) -> TestState:
+    def _get_status(self) -> TestState:
         """Return status of child entries."""
         return _status_precedent(child.status for child in self.iter_children())
 
-    @status.setter
-    def status(self, new_status: TestState):
+    def _set_status(self, new_status: TestState):
         for child in self.iter_children():
             child.status = new_status
 
@@ -141,17 +156,17 @@ class LeafNode(Node):
         if not isinstance(other, LeafNode):
             return False
 
-        return self._pytest_node == other._pytest_node
+        return self.nodeid == other.nodeid
 
     def __repr__(self) -> str:
+        """String representation of this node."""
         return f"LeafNode <{self._pytest_node} {self.status}>"
 
     @property
     def nodeid(self) -> str:
         return self._pytest_node.nodeid
 
-    @property
-    def status(self) -> TestState:
+    def _get_status(self) -> TestState:
         """
         Get the status of this entry. If there is a test report that means the test has
         run and we get the status from the report. Otherwise, the status may be either
@@ -161,8 +176,7 @@ class LeafNode(Node):
             return self._status
         return TestState(self.report.outcome)
 
-    @status.setter
-    def status(self, new_status):
+    def _set_status(self, new_status):
         """
         Update the status. This is only called to either set this node as RUNNING or
         reset the state to INIT. In either case, we reset the test report to None if
@@ -185,12 +199,10 @@ class LeafNode(Node):
         return str(self)
 
 
-def build_from_session(
-    session: nodes.Session,
-) -> Tuple[BranchNode, Dict[str, LeafNode]]:
+def build_from_session(session: nodes.Session,) -> Tuple[BranchNode, Dict[str, Node]]:
     """Build a result tree from the PyTest session object."""
     root = BranchNode(session)
-    nodes_index = {}
+    nodes_index: Dict[str, Node] = {}
 
     for item in session.items:
         collectors = item.listchain()[1:-1]

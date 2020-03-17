@@ -3,7 +3,7 @@ import logging
 from typing import Dict, Any, Tuple
 
 import flask
-import flask_socketio
+import flask_socketio  # type: ignore
 
 from . import runner
 from . import result_tree

@@ -3,7 +3,7 @@ import os
 from typing import Tuple, Dict, Callable
 
 import pytest  # type: ignore
-from _pytest import reports
+from _pytest import reports  # type: ignore
 
 from . import result_tree
 
@@ -15,7 +15,6 @@ class PyTestRunner:
         self._directory = directory
         self._parent_dir = os.path.dirname(directory)
         self.result_tree, self._result_index = _init_result_tree(directory)
-        # self._api = api.Server()
 
     def run_tests(
         self, nodeid: str, updates_callback: Callable[[result_tree.Node], None]
@@ -31,6 +30,7 @@ class PyTestRunner:
         def add_test_report(report: reports.TestReport):
             """Add a test report into our result tree."""
             result_node = self._result_index[report.nodeid]
+            assert isinstance(result_node, result_tree.LeafNode)
             result_node.report = report
             updates_callback(result_node)
 
@@ -42,7 +42,7 @@ class PyTestRunner:
 
 def _init_result_tree(
     directory: str,
-) -> Tuple[result_tree.BranchNode, Dict[str, result_tree.LeafNode]]:
+) -> Tuple[result_tree.BranchNode, Dict[str, result_tree.Node]]:
     """Collect the tests and initialise the result tree skeleton."""
     plugin = CollectPlugin()
     ret = pytest.main(["--collect-only", directory], plugins=[plugin])
