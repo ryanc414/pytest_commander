@@ -8,15 +8,18 @@ from pytest_web_ui import api
 
 
 @pytest.fixture
-def client():
+def clients():
     directory = os.path.join(os.path.dirname(__file__), os.pardir, "pytest_examples",)
-    app = api.build_app(directory)
+    app, socketio = api.build_app(directory)
     app.config["TESTING"] = True
     with app.test_client() as client:
-        yield client
+        socket_client = socketio.test_client(app, flask_test_client=client)
+        yield client, socket_client
 
 
-def test_report_skeleton(client):
+def test_report_skeleton(clients):
+    """Test that the report skeleton is correctly returned after init."""
+    client, _ = clients
     json_filepath = os.path.join(
         os.path.dirname(__file__), os.pardir, "test_data", "result_tree_skeleton.json"
     )
@@ -28,3 +31,10 @@ def test_report_skeleton(client):
     assert rsp.status_code == 200
     rsp_json = rsp.get_json()
     assert rsp_json == expected_serialization
+
+
+def test_run_test(clients):
+    flask_client, socket_client = clients
+    socket_client.emit("run test", "pytest_examples/test_a.py::test_one")
+    rcvd = socket_client.get_received()
+    assert len(rcvd) == 2

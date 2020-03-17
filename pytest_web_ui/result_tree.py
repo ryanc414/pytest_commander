@@ -22,6 +22,7 @@ class TestState(enum.Enum):
     SKIPPED = "skipped"
     PASSED = "passed"
     FAILED = "failed"
+    RUNNING = "running"
 
 
 _TEST_STATE_PRECEDENT = {
@@ -29,6 +30,7 @@ _TEST_STATE_PRECEDENT = {
     TestState.SKIPPED: 2,
     TestState.PASSED: 3,
     TestState.FAILED: 4,
+    TestState.RUNNING: 5,
 }
 
 
@@ -55,6 +57,11 @@ class Node(abc.ABC):
     @property
     @abc.abstractmethod
     def status(self) -> TestState:
+        raise NotImplementedError
+
+    @status.setter
+    @abc.abstractmethod
+    def status(self, new_status: TestState):
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -111,6 +118,11 @@ class BranchNode(Node):
         """Return status of child entries."""
         return _status_precedent(child.status for child in self.iter_children())
 
+    @status.setter
+    def status(self, new_status: TestState):
+        for child in self.iter_children():
+            child.status = new_status
+
 
 class LeafNode(Node):
     """
@@ -121,6 +133,7 @@ class LeafNode(Node):
     def __init__(self, item: nodes.Item):
         self._pytest_node = item
         self.report = None
+        self._status = TestState.INIT
 
     def __eq__(self, other: object) -> bool:
         """Compare two LeafNodes for equality."""
@@ -138,9 +151,26 @@ class LeafNode(Node):
 
     @property
     def status(self) -> TestState:
+        """
+        Get the status of this entry. If there is a test report that means the test has
+        run and we get the status from the report. Otherwise, the status may be either
+        INIT (not yet run) or RUNNING (in progress of being run).
+        """
         if self.report is None:
-            return TestState.INIT
+            return self._status
         return self.report.outcome
+
+    @status.setter
+    def status(self, new_status):
+        """
+        Update the status. This is only called to either set this node as RUNNING or
+        reset the state to INIT. In either case, we reset the test report to None if
+        present.
+        """
+        if new_status not in (TestState.INIT, TestState.RUNNING):
+            raise ValueError("Invalid state")
+        self._status = new_status
+        self.report = None
 
     @property
     def longrepr(self) -> Optional[str]:
@@ -158,19 +188,21 @@ def build_from_session(
 ) -> Tuple[BranchNode, Dict[str, LeafNode]]:
     """Build a result tree from the PyTest session object."""
     root = BranchNode(session)
-    leaves_index = {}
+    nodes_index = {}
 
     for item in session.items:
         collectors = item.listchain()[1:-1]
-        branch = _ensure_branch(root, collectors)
+        branch = _ensure_branch(root, collectors, nodes_index)
         leaf = LeafNode(item)
         branch.child_leaves[leaf.nodeid] = leaf
-        leaves_index[item.nodeid] = leaf
+        nodes_index[item.nodeid] = leaf
 
-    return root, leaves_index
+    return root, nodes_index
 
 
-def _ensure_branch(node: BranchNode, collectors: List[nodes.Collector]) -> BranchNode:
+def _ensure_branch(
+    node: BranchNode, collectors: List[nodes.Collector], nodes_index: Dict[str, Node]
+) -> BranchNode:
     """
     Retrieve the branch node under the given root node that corresponds to the given
     chain of collectors. If any branch nodes do not yet exist, they will be
@@ -186,9 +218,10 @@ def _ensure_branch(node: BranchNode, collectors: List[nodes.Collector]) -> Branc
         child = node.child_branches[next_col.nodeid]
     except KeyError:
         child = BranchNode(collector=next_col)
+        nodes_index[child.nodeid] = child
         node.child_branches[next_col.nodeid] = child
 
-    return _ensure_branch(child, rest)
+    return _ensure_branch(child, rest, nodes_index)
 
 
 class LeafNodeSchema(marshmallow.Schema):

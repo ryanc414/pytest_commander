@@ -1,10 +1,11 @@
 """PyTestRunner class and related functions."""
 import os
-from typing import Union, Tuple, Dict
+import queue
+from typing import Tuple, Dict, Callable
 
 import pytest  # type: ignore
-from _pytest import config  # type: ignore
-from _pytest import reports  # type: ignore
+from _pytest import reports
+import flask_socketio
 
 from . import result_tree
 
@@ -18,19 +19,27 @@ class PyTestRunner:
         self.result_tree, self._result_index = _init_result_tree(directory)
         # self._api = api.Server()
 
-    def run_tests(self, nodeid: str) -> Union[int, config.ExitCode]:
+    def run_tests(
+        self, nodeid: str, updates_callback: Callable[[result_tree.Node], None]
+    ):
         """
         Run the test or tests for a given PyTest node. Updates the results tree with
         test reports as they are available.
         """
-        return pytest.main(
-            [os.path.join(self._parent_dir, nodeid)],
-            plugins=[TestRunPlugin(self._add_test_report)],
-        )
+        result_node = self._result_index[nodeid]
+        result_node.status = result_tree.TestState.RUNNING
+        flask_socketio.emit("update", result_node)
 
-    def _add_test_report(self, report: reports.TestReport):
-        """Add a test report into our result tree."""
-        self._result_index[report.nodeid].report = report
+        def add_test_report(report: reports.TestReport):
+            """Add a test report into our result tree."""
+            result_node = self._result_index[report.nodeid]
+            result_node.report = report
+            updates_callback(result_node)
+
+        pytest.main(
+            [os.path.join(self._parent_dir, nodeid)],
+            plugins=[TestRunPlugin(add_test_report)],
+        )
 
 
 def _init_result_tree(
@@ -59,7 +68,9 @@ class CollectPlugin:
 class TestRunPlugin:
     """PyTest plugin used to run tests and store results in our tree."""
 
-    def __init__(self, report_callback):
+    def __init__(
+        self, report_callback: Callable[[reports.TestReport], None],
+    ):
         self._report_callback = report_callback
 
     def pytest_runtest_logreport(self, report):
