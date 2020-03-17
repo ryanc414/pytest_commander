@@ -14,6 +14,7 @@ import marshmallow
 from marshmallow import fields
 import marshmallow_enum  # type: ignore
 from _pytest import nodes  # type: ignore
+from _pytest import python  # type: ignore
 
 
 class TestState(enum.Enum):
@@ -229,7 +230,33 @@ def build_from_session(session: nodes.Session,) -> Tuple[BranchNode, Dict[str, N
         branch.child_leaves[leaf.nodeid] = leaf
         nodes_index[item.nodeid] = leaf
 
+    _remove_singletons(root)
+
     return root, nodes_index
+
+
+def _remove_singletons(root: BranchNode):
+    """
+    Recursively remove all branch nodes from the tree that only have a single child,
+    instead directly linking to that child.
+    """
+    new_child_branches = {}
+
+    for node in root.child_branches.values():
+        _remove_singletons(node)
+        children = list(node.iter_children())
+        assert len(children) != 0
+        if len(children) != 1:
+            new_child_branches[node.nodeid] = node
+            continue
+
+        child = children[0]
+        if isinstance(child, BranchNode):
+            new_child_branches[child.nodeid] = child
+        elif isinstance(child, LeafNode):
+            root.child_leaves[child.nodeid] = child
+
+    root.child_branches = new_child_branches
 
 
 def _ensure_branch(

@@ -1,7 +1,6 @@
 """Unit tests for runner module."""
 import json
 import os
-from pprint import pprint
 from unittest import mock
 
 from pytest_web_ui import runner
@@ -17,7 +16,6 @@ def test_init():
     pyrunner = runner.PyTestRunner(directory)
     schema = result_tree.BranchNodeSchema()
     serialized = schema.dump(pyrunner.result_tree)
-    pprint(serialized)
 
     json_filepath = os.path.join(
         os.path.dirname(__file__), os.pardir, "test_data", "result_tree_skeleton.json"
