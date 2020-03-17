@@ -85,6 +85,14 @@ class Node(abc.ABC):
         """
         raise NotImplementedError
 
+    @property
+    @abc.abstractmethod
+    def parent_nodeids(self) -> List[str]:
+        """
+        Return list of parend node IDs up to the root.
+        """
+        raise NotImplementedError
+
 
 class BranchNode(Node):
     """
@@ -131,6 +139,11 @@ class BranchNode(Node):
         """Unique ID of this node, used for indexing."""
         return self._pytest_node.nodeid
 
+    @property
+    def parent_nodeids(self) -> List[str]:
+        """Return list of parent node IDs up to the root."""
+        return [node.nodeid for node in self._pytest_node.listchain()]
+
     def _get_status(self) -> TestState:
         """Return status of child entries."""
         return _status_precedent(child.status for child in self.iter_children())
@@ -166,6 +179,22 @@ class LeafNode(Node):
     def nodeid(self) -> str:
         return self._pytest_node.nodeid
 
+    @property
+    def parent_nodeids(self) -> List[str]:
+        """Return list of parent node IDs up to the root."""
+        return [node.nodeid for node in self._pytest_node.listchain()[1:-1]]
+
+    @property
+    def longrepr(self) -> Optional[str]:
+        if self.report is None or self.report.longrepr is None:
+            return None
+
+        return str(self.report.longrepr)
+
+    def pretty_format(self) -> str:
+        """Output a pretty-formatted string of the whole tree, for debug purposes."""
+        return str(self)
+
     def _get_status(self) -> TestState:
         """
         Get the status of this entry. If there is a test report that means the test has
@@ -186,17 +215,6 @@ class LeafNode(Node):
             raise ValueError("Invalid state")
         self._status = new_status
         self.report = None
-
-    @property
-    def longrepr(self) -> Optional[str]:
-        if self.report is None or self.report.longrepr is None:
-            return None
-
-        return str(self.report.longrepr)
-
-    def pretty_format(self) -> str:
-        """Output a pretty-formatted string of the whole tree, for debug purposes."""
-        return str(self)
 
 
 def build_from_session(session: nodes.Session,) -> Tuple[BranchNode, Dict[str, Node]]:
@@ -243,6 +261,7 @@ class NodeSchema(marshmallow.Schema):
 
     nodeid = fields.Str()
     status = marshmallow_enum.EnumField(TestState, by_value=True)
+    parent_nodeids = fields.List(fields.Str())
 
 
 class LeafNodeSchema(NodeSchema):

@@ -9,6 +9,7 @@ from pytest_web_ui import api
 
 @pytest.fixture
 def clients():
+    """Setup and yield flask and socketIO test clients."""
     directory = os.path.join(os.path.dirname(__file__), os.pardir, "pytest_examples",)
     app, socketio = api.build_app(directory)
     app.config["TESTING"] = True
@@ -24,12 +25,13 @@ def test_report_skeleton(clients):
         os.path.dirname(__file__), os.pardir, "test_data", "result_tree_skeleton.json"
     )
 
-    with open(json_filepath) as f:
-        expected_serialization = json.load(f)
-
     rsp = client.get("/api/v1/result-tree")
     assert rsp.status_code == 200
     rsp_json = rsp.get_json()
+
+    with open(json_filepath) as f:
+        expected_serialization = json.load(f)
+
     assert rsp_json == expected_serialization
 
 
@@ -37,6 +39,7 @@ _EXPECTED_RCVD = [
     {
         "args": [
             {
+                "parent_nodeids": ["pytest_examples/test_a.py"],
                 "longrepr": None,
                 "nodeid": "pytest_examples/test_a.py::test_one",
                 "status": "running",
@@ -48,6 +51,7 @@ _EXPECTED_RCVD = [
     {
         "args": [
             {
+                "parent_nodeids": ["pytest_examples/test_a.py"],
                 "longrepr": None,
                 "nodeid": "pytest_examples/test_a.py::test_one",
                 "status": "passed",
