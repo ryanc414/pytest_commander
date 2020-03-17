@@ -3,8 +3,8 @@ import json
 import os
 from unittest import mock
 
-from pytest_web_ui import runner
-from pytest_web_ui import result_tree
+from pytest_ui_server import runner
+from pytest_ui_server import result_tree
 
 
 def test_init():

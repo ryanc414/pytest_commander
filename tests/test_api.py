@@ -4,7 +4,7 @@ import os
 
 import pytest
 
-from pytest_web_ui import api
+from pytest_ui_server import api
 
 
 @pytest.fixture

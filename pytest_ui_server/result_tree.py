@@ -14,7 +14,6 @@ import marshmallow
 from marshmallow import fields
 import marshmallow_enum  # type: ignore
 from _pytest import nodes  # type: ignore
-from _pytest import python  # type: ignore
 
 
 class TestState(enum.Enum):

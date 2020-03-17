@@ -3,7 +3,7 @@ import setuptools
 
 def main():
     setuptools.setup(
-        name="pytest_web_ui",
+        name="pytest_ui_server",
         version="0.0.1",
         author="Ryan Collingham",
         author_email="ryanc118@gmail.com",
