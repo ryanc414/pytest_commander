@@ -1,9 +1,29 @@
 import React from 'react';
 import axios from 'axios';
+import { ListGroup, ListGroupItem } from 'reactstrap';
+import Sidebar from 'react-sidebar';
+
+interface BranchNode {
+  nodeid: string,
+  status: string,
+  parent_nodeids: Array<string>,
+  child_branches: { [key: string]: BranchNode },
+  child_leaves: { [key: string]: LeafNode },
+}
+
+interface LeafNode {
+  nodeid: string,
+  status: string,
+  parent_nodeids: Array<string>,
+  longrepr: string,
+}
 
 interface AppState {
-  resultTree: any,
+  resultTree: BranchNode | null,
   loading: boolean,
+  sidebarOpen: boolean,
+  selectedBranches: Array<string>,
+  selectedLeaf: string | null,
 }
 
 /**
@@ -15,7 +35,13 @@ class App extends React.Component<object, AppState> {
     this.state = {
       resultTree: null,
       loading: false,
+      sidebarOpen: true,
+      selectedBranches: [],
+      selectedLeaf: null,
     }
+    this.onSetSidebarOpen = this.onSetSidebarOpen.bind(this);
+    this.handleBranchClick = this.handleBranchClick.bind(this);
+    this.handleLeafClick = this.handleLeafClick.bind(this);
   }
 
   componentDidMount() {
@@ -28,22 +54,80 @@ class App extends React.Component<object, AppState> {
     });
   }
 
+  onSetSidebarOpen(open: boolean) {
+    this.setState({ sidebarOpen: open })
+  }
+
+  /**
+   * Handle a branch node being clicked.
+   * @param nodeid ID of clicked branch node
+   */
+  handleBranchClick(nodeid: string) {
+    this.setState((state) => ({
+      selectedBranches: state.selectedBranches.concat([nodeid]),
+      selectedLeaf: null,
+    }));
+  }
+
+  /**
+   * Handle a leaf node being clicked.
+   * @param nodeid ID of clicked leaf node
+   */
+  handleLeafClick(nodeid: string) {
+    this.setState((state) => ({
+      selectedLeaf: nodeid,
+    }))
+  }
+
   render() {
+    const selectedBranch = getSelectedBranch(this.state);
+
+    const selectedLeaf = selectedBranch && this.state.selectedLeaf ?
+      selectedBranch.child_leaves[this.state.selectedLeaf] : null;
+
     return (
-      <div>
-        <NavColumn resultTree={this.state.resultTree} />
-        <InfoPane resultTree={this.state.resultTree} />
-      </div>
+      <Sidebar
+        sidebar={
+          < NavColumn
+            selectedBranch={selectedBranch}
+            handleBranchClick={this.handleBranchClick}
+            handleLeafClick={this.handleLeafClick}
+          />
+        }
+        open={this.state.sidebarOpen}
+        docked={true}
+        onSetOpen={this.onSetSidebarOpen}
+        styles={{ sidebar: { background: "white" } }}
+      >
+        <InfoPane selectedLeaf={selectedLeaf} />
+      </Sidebar >
     );
   }
 }
 
+/**
+ * Get the currently selected branch node, or null if the result tree is not yet loaded.
+ * @param state App state
+ */
+const getSelectedBranch = (state: AppState) => {
+  if (state.resultTree) {
+    return state.selectedBranches.reduce(
+      (node: BranchNode, selection: string) => node.child_branches[selection],
+      state.resultTree,
+    );
+  } else {
+    return null;
+  }
+};
+
 interface NavProps {
-  resultTree: any,
+  selectedBranch: BranchNode | null,
+  handleBranchClick: (nodeid: string) => void,
+  handleLeafClick: (nodeid: string) => void,
 }
 
 interface InfoPaneProps {
-  resultTree: any,
+  selectedLeaf: LeafNode | null,
 }
 
 /**
@@ -51,17 +135,33 @@ interface InfoPaneProps {
  * @param props Component props
  */
 const NavColumn = (props: NavProps) => {
-  if (!props.resultTree) {
+  if (!props.selectedBranch) {
     return <span>Loading...</span>;
   }
 
-  const childBranches = Object.keys(props.resultTree.child_branches);
-  const childLeaves = Object.keys(props.resultTree.child_leaves);
+  const childBranches = Object.keys(props.selectedBranch.child_branches);
+  const childLeaves = Object.keys(props.selectedBranch.child_leaves);
   return (
-    <>
-      {childBranches.map((entry: string) => <div>{entry + " (branch)"}</div>)}
-      {childLeaves.map((entry: string) => <div>{entry + " (leaf)"}</div>)}
-    </>
+    <ListGroup>
+      {
+        childBranches.map(
+          (entry: string) => (
+            <ListGroupItem onClick={() => props.handleBranchClick(entry)}>
+              {entry + " (branch)"}
+            </ListGroupItem>
+          )
+        )
+      }
+      {
+        childLeaves.map(
+          (entry: string) => (
+            <ListGroupItem onClick={() => props.handleLeafClick(entry)}>
+              {entry + " (leaf)"}
+            </ListGroupItem>
+          )
+        )
+      }
+    </ListGroup>
   );
 }
 
@@ -70,7 +170,8 @@ const NavColumn = (props: NavProps) => {
  * @param props Component props
  */
 const InfoPane = (props: InfoPaneProps) => {
-  return <span>InfoPane</span>
+  const selectedNodeid = props.selectedLeaf ? props.selectedLeaf.nodeid : null;
+  return <span>{selectedNodeid}</span>;
 }
 
 export default App;
