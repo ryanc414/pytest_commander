@@ -15,6 +15,7 @@ def main() -> int:
     app, socketio = api.build_app(args.directory)
     LOGGER.critical(f"View in your browser at http://localhost:{args.port}/")
     socketio.run(app, port=args.port)
+    return 0
 
 
 def parse_args() -> argparse.Namespace:
