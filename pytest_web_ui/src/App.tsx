@@ -1,7 +1,11 @@
 import React from 'react';
 import axios from 'axios';
-import { ListGroup, ListGroupItem } from 'reactstrap';
+import {
+  ListGroup, ListGroupItem, Breadcrumb, BreadcrumbItem
+} from 'reactstrap';
 import Sidebar from 'react-sidebar';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faHome } from '@fortawesome/free-solid-svg-icons';
 
 interface BranchNode {
   nodeid: string,
@@ -42,6 +46,7 @@ class App extends React.Component<object, AppState> {
     this.onSetSidebarOpen = this.onSetSidebarOpen.bind(this);
     this.handleBranchClick = this.handleBranchClick.bind(this);
     this.handleLeafClick = this.handleLeafClick.bind(this);
+    this.handleBreadcrumbClick = this.handleBreadcrumbClick.bind(this);
   }
 
   componentDidMount() {
@@ -79,6 +84,26 @@ class App extends React.Component<object, AppState> {
     }))
   }
 
+  handleBreadcrumbClick(nodeid: string, index: number) {
+    this.setState((state: AppState) => {
+      // An index of -1 is used to indicate the home icon was clicked.
+      if (index < 0) {
+        return { selectedBranches: [] };
+      }
+
+      if (state.selectedBranches[index] !== nodeid) {
+        console.log(
+          "Breadcrumb entry " + nodeid + " not in current selection."
+        );
+        return null;
+      }
+
+      return {
+        selectedBranches: state.selectedBranches.slice(0, index + 1)
+      };
+    });
+  }
+
   render() {
     const selectedBranch = getSelectedBranch(this.state);
 
@@ -99,6 +124,10 @@ class App extends React.Component<object, AppState> {
         onSetOpen={this.onSetSidebarOpen}
         styles={{ sidebar: { background: "white" } }}
       >
+        <NavBreadcrumbs
+          selectedBranches={this.state.selectedBranches}
+          handleBreadcrumbClick={this.handleBreadcrumbClick}
+        />
         <InfoPane selectedLeaf={selectedLeaf} />
       </Sidebar >
     );
@@ -173,5 +202,48 @@ const InfoPane = (props: InfoPaneProps) => {
   const selectedNodeid = props.selectedLeaf ? props.selectedLeaf.nodeid : null;
   return <span>{selectedNodeid}</span>;
 }
+
+interface NavBreadcrumbsProps {
+  selectedBranches: Array<string>,
+  handleBreadcrumbClick: (nodeid: string, index: number) => void,
+}
+
+const NavBreadcrumbs = (props: NavBreadcrumbsProps) => {
+  const numSelected = props.selectedBranches.length;
+
+  if (!numSelected) {
+    return (
+      <Breadcrumb>
+        <BreadcrumbItem><FontAwesomeIcon icon={faHome} /></BreadcrumbItem>
+      </Breadcrumb>
+    );
+  }
+
+  const currSelected = props.selectedBranches[numSelected - 1];
+  const restSelected = props.selectedBranches.slice(0, numSelected - 1);
+
+  return (
+    <Breadcrumb>
+      <BreadcrumbItem>
+        <FontAwesomeIcon
+          icon={faHome}
+          onClick={() => props.handleBreadcrumbClick("", -1)}
+        />
+      </BreadcrumbItem>
+      {
+        restSelected.map(
+          (nodeid: string, index: number) => (
+            <BreadcrumbItem>
+              <button onClick={() => props.handleBreadcrumbClick(nodeid, index)}>
+                {nodeid}
+              </button>
+            </BreadcrumbItem>
+          )
+        )
+      }
+      <BreadcrumbItem>{currSelected}</BreadcrumbItem>
+    </Breadcrumb>
+  );
+};
 
 export default App;
