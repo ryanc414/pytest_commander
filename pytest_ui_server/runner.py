@@ -13,7 +13,6 @@ class PyTestRunner:
 
     def __init__(self, directory: str):
         self._directory = directory
-        self._parent_dir = os.path.dirname(directory)
         self.result_tree, self._result_index = _init_result_tree(directory)
 
     def run_tests(
@@ -34,9 +33,10 @@ class PyTestRunner:
             result_node.report = report
             updates_callback(result_node)
 
+        full_path = nodeid.replace("/", os.sep)
+
         pytest.main(
-            [os.path.join(self._parent_dir, nodeid)],
-            plugins=[TestRunPlugin(add_test_report)],
+            [full_path], plugins=[TestRunPlugin(add_test_report)],
         )
 
 

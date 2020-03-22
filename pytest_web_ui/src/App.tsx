@@ -82,22 +82,21 @@ class App extends React.Component<object, AppState> {
    * @param data Update data received over socket
    */
   handleUpdate(data: UpdateData) {
+    console.log("Received update: " + data);
+
     const root = this.state.resultTree;
     if (!root) {
       console.log("Received update before result tree is loaded, ignoring.");
       return;
     }
 
-    const parentNode = data.node.parent_nodeids.reduce(
-      (acc: BranchNode, curr: string) => acc.child_branches[curr],
-      root,
-    );
-
-    if (data.is_leaf) {
-      parentNode.child_leaves[data.node.nodeid] = (data.node as LeafNode);
-    } else {
-      parentNode.child_branches[data.node.nodeid] = (data.node as BranchNode);
-    }
+    this.setState((state) => {
+      const newTree = updateResultTree(
+        root, data.node.parent_nodeids, data,
+      );
+      console.log(newTree);
+      return { resultTree: newTree };
+    });
   }
 
   /**
@@ -185,6 +184,44 @@ class App extends React.Component<object, AppState> {
 }
 
 /**
+ * Update a particular node in the result tree with new data.
+ * @param currNode Existing in result tree to update
+ * @param parentNodeIds List of parent node IDs to reach node to update
+ * @param updateData Update data for new node
+ */
+const updateResultTree = (
+  currNode: BranchNode, parentNodeIds: Array<string>, updateData: UpdateData
+): BranchNode => {
+  if (parentNodeIds.length > 0) {
+    const head = parentNodeIds[0];
+    const tail = parentNodeIds.slice(1, parentNodeIds.length);
+    return {
+      ...currNode,
+      child_branches: {
+        ...currNode.child_branches,
+        head: updateResultTree(currNode.child_branches[head], tail, updateData),
+      }
+    };
+  }
+
+  if (updateData.is_leaf) {
+    const childLeaves = { ...currNode.child_leaves };
+    childLeaves[updateData.node.nodeid] = (updateData.node as LeafNode);
+    return {
+      ...currNode,
+      child_leaves: childLeaves,
+    }
+  } else {
+    const childBranches = { ...currNode.child_branches };
+    childBranches[updateData.node.nodeid] = (updateData.node as BranchNode);
+    return {
+      ...currNode,
+      child_branches: childBranches,
+    }
+  }
+}
+
+/**
  * Get the currently selected branch node, or null if the result tree is not yet loaded.
  * @param state App state
  */
@@ -227,7 +264,7 @@ const NavColumn = (props: NavProps) => {
               <FontAwesomeIcon
                 icon={faPlay}
                 onClick={(e: React.MouseEvent) => {
-                  e.preventDefault();
+                  e.stopPropagation();
                   props.handleTestRun(nodeid);
                 }}
               />
@@ -243,7 +280,7 @@ const NavColumn = (props: NavProps) => {
               <FontAwesomeIcon
                 icon={faPlay}
                 onClick={(e: React.MouseEvent) => {
-                  e.preventDefault();
+                  e.stopPropagation();
                   props.handleTestRun(nodeid);
                 }}
               />
@@ -264,8 +301,17 @@ interface InfoPaneProps {
  * @param props Component props
  */
 const InfoPane = (props: InfoPaneProps) => {
-  const selectedNodeid = props.selectedLeaf ? props.selectedLeaf.nodeid : null;
-  return <span>{selectedNodeid}</span>;
+  if (!props.selectedLeaf) {
+    return <div>Please select a test.</div>
+  }
+
+  return (
+    <>
+      <div>{"nodeid: " + props.selectedLeaf.nodeid}</div>
+      <div>{"status: " + props.selectedLeaf.status}</div>
+      <div>{"longrepr: " + props.selectedLeaf.longrepr}</div>
+    </>
+  )
 }
 
 interface NavBreadcrumbsProps {
