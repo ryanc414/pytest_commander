@@ -39,10 +39,13 @@ _EXPECTED_RCVD = [
     {
         "args": [
             {
-                "parent_nodeids": ["pytest_examples/test_a.py"],
-                "longrepr": None,
-                "nodeid": "pytest_examples/test_a.py::test_one",
-                "status": "running",
+                "is_leaf": True,
+                "node": {
+                    "parent_nodeids": ["pytest_examples/test_a.py"],
+                    "longrepr": None,
+                    "nodeid": "pytest_examples/test_a.py::test_one",
+                    "status": "running",
+                },
             }
         ],
         "name": "update",
@@ -51,10 +54,13 @@ _EXPECTED_RCVD = [
     {
         "args": [
             {
-                "parent_nodeids": ["pytest_examples/test_a.py"],
-                "longrepr": None,
-                "nodeid": "pytest_examples/test_a.py::test_one",
-                "status": "passed",
+                "is_leaf": True,
+                "node": {
+                    "parent_nodeids": ["pytest_examples/test_a.py"],
+                    "longrepr": None,
+                    "nodeid": "pytest_examples/test_a.py::test_one",
+                    "status": "passed",
+                },
             }
         ],
         "name": "update",
