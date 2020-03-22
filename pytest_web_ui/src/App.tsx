@@ -5,7 +5,8 @@ import {
 } from 'reactstrap';
 import Sidebar from 'react-sidebar';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHome } from '@fortawesome/free-solid-svg-icons';
+import { faHome, faPlay } from '@fortawesome/free-solid-svg-icons';
+import io from 'socket.io-client';
 
 interface BranchNode {
   nodeid: string,
@@ -22,12 +23,18 @@ interface LeafNode {
   longrepr: string,
 }
 
+interface UpdateData {
+  node: LeafNode | BranchNode,
+  is_leaf: boolean,
+}
+
 interface AppState {
   resultTree: BranchNode | null,
   loading: boolean,
   sidebarOpen: boolean,
   selectedBranches: Array<string>,
   selectedLeaf: string | null,
+  socket: SocketIOClient.Socket | null,
 }
 
 /**
@@ -42,15 +49,22 @@ class App extends React.Component<object, AppState> {
       sidebarOpen: true,
       selectedBranches: [],
       selectedLeaf: null,
+      socket: null,
     }
     this.onSetSidebarOpen = this.onSetSidebarOpen.bind(this);
     this.handleBranchClick = this.handleBranchClick.bind(this);
     this.handleLeafClick = this.handleLeafClick.bind(this);
     this.handleBreadcrumbClick = this.handleBreadcrumbClick.bind(this);
+    this.handleUpdate = this.handleUpdate.bind(this);
+    this.handleTestRun = this.handleTestRun.bind(this);
   }
 
   componentDidMount() {
-    this.setState({ loading: true }, this.getResultTree);
+    const socket = io();
+    this.setState({ loading: true, socket: socket }, () => {
+      socket.on('update', this.handleUpdate);
+      this.getResultTree();
+    });
   }
 
   getResultTree() {
@@ -61,6 +75,41 @@ class App extends React.Component<object, AppState> {
 
   onSetSidebarOpen(open: boolean) {
     this.setState({ sidebarOpen: open })
+  }
+
+  /**
+   * Handle an update event received over a websocket.
+   * @param data Update data received over socket
+   */
+  handleUpdate(data: UpdateData) {
+    const root = this.state.resultTree;
+    if (!root) {
+      console.log("Received update before result tree is loaded, ignoring.");
+      return;
+    }
+
+    const parentNode = data.node.parent_nodeids.reduce(
+      (acc: BranchNode, curr: string) => acc.child_branches[curr],
+      root,
+    );
+
+    if (data.is_leaf) {
+      parentNode.child_leaves[data.node.nodeid] = (data.node as LeafNode);
+    } else {
+      parentNode.child_branches[data.node.nodeid] = (data.node as BranchNode);
+    }
+  }
+
+  /**
+   * Run a test after its run button has been clicked.
+   * @param nodeid ID of node to run
+   */
+  handleTestRun(nodeid: string) {
+    if (!this.state.socket) {
+      console.log("Socket connection not yet established");
+      return;
+    }
+    this.state.socket.emit("run test", nodeid);
   }
 
   /**
@@ -117,6 +166,7 @@ class App extends React.Component<object, AppState> {
             selectedBranch={selectedBranch}
             handleBranchClick={this.handleBranchClick}
             handleLeafClick={this.handleLeafClick}
+            handleTestRun={this.handleTestRun}
           />
         }
         open={this.state.sidebarOpen}
@@ -153,10 +203,7 @@ interface NavProps {
   selectedBranch: BranchNode | null,
   handleBranchClick: (nodeid: string) => void,
   handleLeafClick: (nodeid: string) => void,
-}
-
-interface InfoPaneProps {
-  selectedLeaf: LeafNode | null,
+  handleTestRun: (nodeid: string) => void,
 }
 
 /**
@@ -174,24 +221,42 @@ const NavColumn = (props: NavProps) => {
     <ListGroup>
       {
         childBranches.map(
-          (entry: string) => (
-            <ListGroupItem onClick={() => props.handleBranchClick(entry)}>
-              {entry + " (branch)"}
+          (nodeid: string) => (
+            <ListGroupItem onClick={(e: React.MouseEvent) => props.handleBranchClick(nodeid)}>
+              {nodeid}
+              <FontAwesomeIcon
+                icon={faPlay}
+                onClick={(e: React.MouseEvent) => {
+                  e.preventDefault();
+                  props.handleTestRun(nodeid);
+                }}
+              />
             </ListGroupItem>
           )
         )
       }
       {
         childLeaves.map(
-          (entry: string) => (
-            <ListGroupItem onClick={() => props.handleLeafClick(entry)}>
-              {entry + " (leaf)"}
+          (nodeid: string) => (
+            <ListGroupItem onClick={() => props.handleLeafClick(nodeid)}>
+              {nodeid}
+              <FontAwesomeIcon
+                icon={faPlay}
+                onClick={(e: React.MouseEvent) => {
+                  e.preventDefault();
+                  props.handleTestRun(nodeid);
+                }}
+              />
             </ListGroupItem>
           )
         )
       }
     </ListGroup>
   );
+}
+
+interface InfoPaneProps {
+  selectedLeaf: LeafNode | null,
 }
 
 /**

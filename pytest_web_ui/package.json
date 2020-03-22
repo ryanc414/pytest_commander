@@ -16,6 +16,7 @@
     "@types/react-fontawesome": "^1.6.4",
     "@types/react-sidebar": "^3.0.0",
     "@types/reactstrap": "^8.4.2",
+    "@types/socket.io-client": "^1.4.32",
     "aphrodite": "^2.4.0",
     "axios": "^0.19.2",
     "bootstrap": "^4.4.1",
@@ -24,6 +25,7 @@
     "react-scripts": "3.4.0",
     "react-sidebar": "^3.0.2",
     "reactstrap": "^8.4.1",
+    "socket.io-client": "^2.3.0",
     "typescript": "^3.7.5"
   },
   "scripts": {
