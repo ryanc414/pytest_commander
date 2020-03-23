@@ -82,7 +82,7 @@ class App extends React.Component<object, AppState> {
    * @param data Update data received over socket
    */
   handleUpdate(data: UpdateData) {
-    console.log("Received update: " + data);
+    console.log(data);
 
     const root = this.state.resultTree;
     if (!root) {
@@ -195,29 +195,37 @@ const updateResultTree = (
   if (parentNodeIds.length > 0) {
     const head = parentNodeIds[0];
     const tail = parentNodeIds.slice(1, parentNodeIds.length);
-    return {
+
+    const childBranches = { ...currNode.child_branches };
+    childBranches[head] = updateResultTree(
+      currNode.child_branches[head], tail, updateData
+    );
+    const ret = {
       ...currNode,
-      child_branches: {
-        ...currNode.child_branches,
-        head: updateResultTree(currNode.child_branches[head], tail, updateData),
-      }
+      child_branches: childBranches,
     };
+    console.log(ret);
+    return ret;
   }
 
   if (updateData.is_leaf) {
     const childLeaves = { ...currNode.child_leaves };
     childLeaves[updateData.node.nodeid] = (updateData.node as LeafNode);
-    return {
+    const ret = {
       ...currNode,
       child_leaves: childLeaves,
-    }
+    };
+    console.log(ret);
+    return ret;
   } else {
     const childBranches = { ...currNode.child_branches };
     childBranches[updateData.node.nodeid] = (updateData.node as BranchNode);
-    return {
+    const ret = {
       ...currNode,
       child_branches: childBranches,
-    }
+    };
+    console.log(ret);
+    return ret;
   }
 }
 
