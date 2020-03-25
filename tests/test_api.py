@@ -29,6 +29,10 @@ def test_report_skeleton(clients):
     assert rsp.status_code == 200
     rsp_json = rsp.get_json()
 
+    # Uncomment to update the serialization snapshot.
+    # with open(json_filepath, "w") as f:
+    #    json.dump(rsp_json, f)
+
     with open(json_filepath) as f:
         expected_serialization = json.load(f)
 

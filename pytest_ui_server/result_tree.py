@@ -51,6 +51,9 @@ def _status_precedent(statuses: Iterator[TestState]) -> TestState:
 class Node(abc.ABC):
     """Define common interface for branch and leaf nodes."""
 
+    def __init__(self):
+        self.parent_nodeids: List[str] = []
+
     @property
     @abc.abstractmethod
     def nodeid(self) -> str:
@@ -85,14 +88,6 @@ class Node(abc.ABC):
         """
         raise NotImplementedError
 
-    @property
-    @abc.abstractmethod
-    def parent_nodeids(self) -> List[str]:
-        """
-        Return list of parend node IDs up to the root.
-        """
-        raise NotImplementedError
-
 
 class BranchNode(Node):
     """
@@ -107,6 +102,7 @@ class BranchNode(Node):
         self._pytest_node = collector
         self.child_branches: Dict[str, BranchNode] = {}
         self.child_leaves: Dict[str, LeafNode] = {}
+        self.parent_nodeids: List[str] = []
 
     def __eq__(self, other: object) -> bool:
         """Compare two BranchNodes for equality."""
@@ -139,11 +135,6 @@ class BranchNode(Node):
         """Unique ID of this node, used for indexing."""
         return self._pytest_node.nodeid
 
-    @property
-    def parent_nodeids(self) -> List[str]:
-        """Return list of parent node IDs up to the root."""
-        return [node.nodeid for node in self._pytest_node.listchain()]
-
     def _get_status(self) -> TestState:
         """Return status of child entries."""
         return _status_precedent(child.status for child in self.iter_children())
@@ -163,6 +154,7 @@ class LeafNode(Node):
         self._pytest_node = item
         self.report = None
         self._status = TestState.INIT
+        self.parent_nodeids: List[str] = []
 
     def __eq__(self, other: object) -> bool:
         """Compare two LeafNodes for equality."""
@@ -178,11 +170,6 @@ class LeafNode(Node):
     @property
     def nodeid(self) -> str:
         return self._pytest_node.nodeid
-
-    @property
-    def parent_nodeids(self) -> List[str]:
-        """Return list of parent node IDs up to the root."""
-        return [node.nodeid for node in self._pytest_node.listchain()[1:-1]]
 
     @property
     def longrepr(self) -> Optional[str]:
@@ -230,6 +217,9 @@ def build_from_session(session: nodes.Session,) -> Tuple[BranchNode, Dict[str, N
         nodes_index[item.nodeid] = leaf
 
     _remove_singletons(root)
+
+    for branch in root.child_branches.values():
+        _set_parent_nodeids(branch)
 
     return root, nodes_index
 
@@ -280,6 +270,19 @@ def _ensure_branch(
         node.child_branches[next_col.nodeid] = child
 
     return _ensure_branch(child, rest, nodes_index)
+
+
+def _set_parent_nodeids(node: BranchNode):
+    """
+    Recursively set the parent_nodeids attribute on this node and all of its
+    children, based on the current tree structure.
+    """
+    for child_branch in node.child_branches.values():
+        child_branch.parent_nodeids = node.parent_nodeids + [node.nodeid]
+        _set_parent_nodeids(child_branch)
+
+    for child_leaf in node.child_leaves.values():
+        child_leaf.parent_nodeids = node.parent_nodeids + [node.nodeid]
 
 
 class NodeSchema(marshmallow.Schema):

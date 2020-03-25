@@ -17,9 +17,10 @@ def build_app(directory: str) -> Tuple[flask.Flask, flask_socketio.SocketIO]:
     build_dir = os.path.join(
         os.path.dirname(__file__), os.pardir, "pytest_web_ui", "build"
     )
+    static_dir = os.path.join(build_dir, "static")
     index_file = os.path.join(build_dir, "index.html")
 
-    app = flask.Flask(__name__, root_path=build_dir)
+    app = flask.Flask(__name__, root_path=build_dir, static_folder=static_dir)
     test_runner = runner.PyTestRunner(directory)
     branch_schema = result_tree.BranchNodeSchema()
     leaf_schema = result_tree.LeafNodeSchema()
@@ -29,9 +30,10 @@ def build_app(directory: str) -> Tuple[flask.Flask, flask_socketio.SocketIO]:
     def index():
         return flask.send_file(index_file)
 
-    @app.route("/js/<path:path>")
+    @app.route("/<path:path>")
     def send_build(path):
-        return flask.send_from_directory(path)
+        LOGGER.debug("Sending file: %s", path)
+        return flask.send_from_directory(build_dir, path)
 
     @app.route("/api/v1/result-tree")
     def tree() -> Dict[str, Any]:

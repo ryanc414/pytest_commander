@@ -208,7 +208,10 @@ const updateResultTree = (
     return ret;
   }
 
+  console.log(updateData);
+
   if (updateData.is_leaf) {
+    console.log(currNode);
     const childLeaves = { ...currNode.child_leaves };
     childLeaves[updateData.node.nodeid] = (updateData.node as LeafNode);
     const ret = {
