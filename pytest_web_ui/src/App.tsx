@@ -12,8 +12,8 @@ import {
   Switch,
   Route,
   Link,
+  useLocation,
 } from "react-router-dom";
-
 
 interface BranchNode {
   nodeid: string,
@@ -67,7 +67,6 @@ interface AppState {
   resultTree: BranchNode | null,
   loading: boolean,
   sidebarOpen: boolean,
-  selectedLeaf: string | null,
   socket: SocketIOClient.Socket | null,
 }
 
@@ -78,11 +77,9 @@ class TestRunner extends React.Component<AppProps, AppState> {
       resultTree: null,
       loading: false,
       sidebarOpen: true,
-      selectedLeaf: null,
       socket: null,
     }
     this.onSetSidebarOpen = this.onSetSidebarOpen.bind(this);
-    this.handleLeafClick = this.handleLeafClick.bind(this);
     this.handleUpdate = this.handleUpdate.bind(this);
     this.handleTestRun = this.handleTestRun.bind(this);
   }
@@ -110,11 +107,9 @@ class TestRunner extends React.Component<AppProps, AppState> {
    * @param data Update data received over socket
    */
   handleUpdate(data: UpdateData) {
-    console.log(data);
 
     const root = this.state.resultTree;
     if (!root) {
-      console.log("Received update before result tree is loaded, ignoring.");
       return;
     }
 
@@ -122,7 +117,6 @@ class TestRunner extends React.Component<AppProps, AppState> {
       const newTree = updateResultTree(
         root, data.node.parent_nodeids, data,
       );
-      console.log(newTree);
       return { resultTree: newTree };
     });
   }
@@ -139,24 +133,11 @@ class TestRunner extends React.Component<AppProps, AppState> {
     this.state.socket.emit("run test", nodeid);
   }
 
-  /**
-   * Handle a leaf node being clicked.
-   * @param nodeid ID of clicked leaf node
-   */
-  handleLeafClick(nodeid: string) {
-    this.setState((state) => ({
-      selectedLeaf: nodeid,
-    }))
-  }
-
   render() {
     const selectedBranch = getSelectedBranch(
       this.props.selection,
       this.state.resultTree,
     );
-
-    const selectedLeaf = selectedBranch && this.state.selectedLeaf ?
-      selectedBranch.child_leaves[this.state.selectedLeaf] : null;
 
     return (
       <Switch>
@@ -174,28 +155,53 @@ class TestRunner extends React.Component<AppProps, AppState> {
           }
         />
         <Route path={this.props.url}>
-          <Sidebar
-            sidebar={
-              <NavColumn
-                selectedBranch={selectedBranch}
-                selection={this.props.selection}
-                handleLeafClick={this.handleLeafClick}
-                handleTestRun={this.handleTestRun}
-              />
-            }
-            open={this.state.sidebarOpen}
-            docked={true}
-            onSetOpen={this.onSetSidebarOpen}
-            styles={{ sidebar: { background: "white" } }}
-          >
-            <NavBreadcrumbs selection={this.props.selection} />
-            <InfoPane selectedLeaf={selectedLeaf} />
-          </Sidebar >
+          <TestRunnerDisplay
+            selectedBranch={selectedBranch}
+            selection={this.props.selection}
+            handleTestRun={this.handleTestRun}
+          />
         </Route>
       </Switch>
     );
   }
 }
+
+interface TestRunnerDisplayProps {
+  selectedBranch: BranchNode | null,
+  selection: Array<string>,
+  handleTestRun: (nodeid: string) => void,
+}
+
+/**
+ * Render the navigation column, top breadcrumb menu and the central information
+ * pane together.
+ * @param props render properties
+ */
+const TestRunnerDisplay = (props: TestRunnerDisplayProps) => {
+  const query = useQuery();
+  const selectedLeafID = query.get("selectedLeaf");
+  const selectedLeaf = (selectedLeafID && props.selectedBranch) ?
+    props.selectedBranch.child_leaves[selectedLeafID] : null;
+
+  return (
+    <Sidebar
+      sidebar={
+        <NavColumn
+          selectedBranch={props.selectedBranch}
+          selectedLeafID={selectedLeafID}
+          selection={props.selection}
+          handleTestRun={props.handleTestRun}
+        />
+      }
+      open={true}
+      docked={true}
+      styles={{ sidebar: { background: "white" } }}
+    >
+      <NavBreadcrumbs selection={props.selection} />
+      <InfoPane selectedLeaf={selectedLeaf} />
+    </Sidebar >
+  );
+};
 
 /**
  * Update a particular node in the result tree with new data.
@@ -218,21 +224,16 @@ const updateResultTree = (
       ...currNode,
       child_branches: childBranches,
     };
-    console.log(ret);
     return ret;
   }
 
-  console.log(updateData);
-
   if (updateData.is_leaf) {
-    console.log(currNode);
     const childLeaves = { ...currNode.child_leaves };
     childLeaves[updateData.node.nodeid] = (updateData.node as LeafNode);
     const ret = {
       ...currNode,
       child_leaves: childLeaves,
     };
-    console.log(ret);
     return ret;
   } else {
     const childBranches = { ...currNode.child_branches };
@@ -241,7 +242,6 @@ const updateResultTree = (
       ...currNode,
       child_branches: childBranches,
     };
-    console.log(ret);
     return ret;
   }
 }
@@ -255,19 +255,27 @@ const getSelectedBranch = (
   selection: Array<string>, resultTree: BranchNode | null
 ) => {
   if (resultTree) {
-    return selection.reduce(
-      (node: BranchNode, selection: string) => node.child_branches[selection],
+    const selectedBranch = selection.reduce(
+      (node: BranchNode | undefined, selection: string) => (
+        node?.child_branches[selection]
+      ),
       resultTree,
     );
+    if (selectedBranch) {
+      return selectedBranch;
+    } else {
+      console.log(selection);
+      return null;
+    }
   } else {
     return null;
   }
 };
 
-interface NavProps {
+interface NavColumnProps {
   selectedBranch: BranchNode | null,
+  selectedLeafID: string | null,
   selection: Array<string>,
-  handleLeafClick: (nodeid: string) => void,
   handleTestRun: (nodeid: string) => void,
 }
 
@@ -275,7 +283,7 @@ interface NavProps {
  * NavColumn component: renders the current navigation selection.
  * @param props Component props
  */
-const NavColumn = (props: NavProps) => {
+const NavColumn = (props: NavColumnProps) => {
   if (!props.selectedBranch) {
     return <span>Loading...</span>;
   }
@@ -310,21 +318,32 @@ const NavColumn = (props: NavProps) => {
       }
       {
         childLeaves.map(
-          (nodeid: string) => (
-            <ListGroupItem
-              key={nodeid}
-              onClick={() => props.handleLeafClick(nodeid)}
-            >
-              {nodeid}
-              <FontAwesomeIcon
-                icon={faPlay}
-                onClick={(e: React.MouseEvent) => {
-                  e.stopPropagation();
-                  props.handleTestRun(nodeid);
-                }}
-              />
-            </ListGroupItem>
-          )
+          (nodeid: string) => {
+            const label = (nodeid === props.selectedLeafID) ?
+              nodeid :
+              (
+                <Link
+                  to={`?selectedLeaf=${encodeURIComponent(nodeid)}`}
+                >
+                  {nodeid}
+                </Link>
+              );
+
+            return (
+              <ListGroupItem
+                key={nodeid}
+              >
+                {label}
+                <FontAwesomeIcon
+                  icon={faPlay}
+                  onClick={(e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    props.handleTestRun(nodeid);
+                  }}
+                />
+              </ListGroupItem>
+            );
+          }
         )
       }
     </ListGroup>
@@ -404,5 +423,7 @@ const NavBreadcrumbs = (props: NavBreadcrumbsProps) => {
     </Breadcrumb>
   );
 };
+
+const useQuery = () => new URLSearchParams(useLocation().search);
 
 export default App;
