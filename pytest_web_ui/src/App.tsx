@@ -12,8 +12,6 @@ import {
   Switch,
   Route,
   Link,
-  useParams,
-  useHistory,
 } from "react-router-dom";
 
 
@@ -37,6 +35,34 @@ interface UpdateData {
   is_leaf: boolean,
 }
 
+/**
+ * Top level App component.
+ */
+const App = () => {
+  return (
+    <Router>
+      <Switch>
+        <Route path="/:selection"
+          render={
+            ({ match }) => <TestRunner
+              selection={[decodeURIComponent(match.params.selection)]}
+              url={match.url}
+            />
+          }
+        />
+        <Route path="/">
+          <TestRunner selection={[]} url="" />
+        </Route>
+      </Switch>
+    </Router>
+  );
+};
+
+interface AppProps {
+  selection: Array<string>,
+  url: string,
+}
+
 interface AppState {
   resultTree: BranchNode | null,
   loading: boolean,
@@ -45,22 +71,8 @@ interface AppState {
   socket: SocketIOClient.Socket | null,
 }
 
-/**
- * Top level App component.
- */
-const App = () => {
-  return (
-    <Router>
-      <Switch>
-        <Route path="/:selection" children={<TestRunner />} />
-      </Switch>
-    </Router>
-  );
-};
-
-
-class TestRunner extends React.Component<object, AppState> {
-  constructor(props: object) {
+class TestRunner extends React.Component<AppProps, AppState> {
+  constructor(props: AppProps) {
     super(props);
     this.state = {
       resultTree: null,
@@ -138,30 +150,49 @@ class TestRunner extends React.Component<object, AppState> {
   }
 
   render() {
-    const { selection } = useParams();
-    const selectedBranch = getSelectedBranch(selection, this.state.resultTree);
+    const selectedBranch = getSelectedBranch(
+      this.props.selection,
+      this.state.resultTree,
+    );
 
     const selectedLeaf = selectedBranch && this.state.selectedLeaf ?
       selectedBranch.child_leaves[this.state.selectedLeaf] : null;
 
     return (
-      <Sidebar
-        sidebar={
-          <NavColumn
-            selectedBranch={selectedBranch}
-            selection={selection}
-            handleLeafClick={this.handleLeafClick}
-            handleTestRun={this.handleTestRun}
-          />
-        }
-        open={this.state.sidebarOpen}
-        docked={true}
-        onSetOpen={this.onSetSidebarOpen}
-        styles={{ sidebar: { background: "white" } }}
-      >
-        <NavBreadcrumbs selection={selection} />
-        <InfoPane selectedLeaf={selectedLeaf} />
-      </Sidebar >
+      <Switch>
+        <Route
+          path={`${this.props.url}/:selection`}
+          render={
+            ({ match }) => <TestRunner
+              selection={
+                this.props.selection.concat(
+                  [decodeURIComponent(match.params.selection)]
+                )
+              }
+              url={match.url}
+            />
+          }
+        />
+        <Route path={this.props.url}>
+          <Sidebar
+            sidebar={
+              <NavColumn
+                selectedBranch={selectedBranch}
+                selection={this.props.selection}
+                handleLeafClick={this.handleLeafClick}
+                handleTestRun={this.handleTestRun}
+              />
+            }
+            open={this.state.sidebarOpen}
+            docked={true}
+            onSetOpen={this.onSetSidebarOpen}
+            styles={{ sidebar: { background: "white" } }}
+          >
+            <NavBreadcrumbs selection={this.props.selection} />
+            <InfoPane selectedLeaf={selectedLeaf} />
+          </Sidebar >
+        </Route>
+      </Switch>
     );
   }
 }
@@ -216,21 +247,18 @@ const updateResultTree = (
 }
 
 /**
- * Get the currently selected branch node, or null if the result tree is not yet loaded.
+ * Get the currently selected branch node, or null if the result tree is not yet
+ * loaded.
  * @param state App state
  */
 const getSelectedBranch = (
-  selection: string | undefined, resultTree: BranchNode | null
+  selection: Array<string>, resultTree: BranchNode | null
 ) => {
   if (resultTree) {
-    if (selection) {
-      return selection.split("/").reduce(
-        (node: BranchNode, selection: string) => node.child_branches[selection],
-        resultTree,
-      );
-    } else {
-      return resultTree;
-    }
+    return selection.reduce(
+      (node: BranchNode, selection: string) => node.child_branches[selection],
+      resultTree,
+    );
   } else {
     return null;
   }
@@ -238,7 +266,7 @@ const getSelectedBranch = (
 
 interface NavProps {
   selectedBranch: BranchNode | null,
-  selection: string | undefined,
+  selection: Array<string>,
   handleLeafClick: (nodeid: string) => void,
   handleTestRun: (nodeid: string) => void,
 }
@@ -248,25 +276,27 @@ interface NavProps {
  * @param props Component props
  */
 const NavColumn = (props: NavProps) => {
-  const history = useHistory();
-
   if (!props.selectedBranch) {
     return <span>Loading...</span>;
   }
 
   const childBranches = Object.keys(props.selectedBranch.child_branches);
   const childLeaves = Object.keys(props.selectedBranch.child_leaves);
-  const selection = props.selection ? props.selection : "";
 
   return (
     <ListGroup>
       {
         childBranches.map(
           (nodeid: string) => (
-            <ListGroupItem onClick={
-              () => history.push(selection + "/" + nodeid)
-            }>
-              {nodeid}
+            <ListGroupItem key={nodeid}>
+              <Link to={
+                props.selection
+                  .concat([nodeid])
+                  .map(encodeURIComponent)
+                  .join("/")
+              }>
+                {nodeid}
+              </Link>
               <FontAwesomeIcon
                 icon={faPlay}
                 onClick={(e: React.MouseEvent) => {
@@ -281,7 +311,10 @@ const NavColumn = (props: NavProps) => {
       {
         childLeaves.map(
           (nodeid: string) => (
-            <ListGroupItem onClick={() => props.handleLeafClick(nodeid)}>
+            <ListGroupItem
+              key={nodeid}
+              onClick={() => props.handleLeafClick(nodeid)}
+            >
               {nodeid}
               <FontAwesomeIcon
                 icon={faPlay}
@@ -303,7 +336,8 @@ interface InfoPaneProps {
 }
 
 /**
- * InfoPane component: renders information on the currently selected testcase (if any)
+ * InfoPane component: renders information on the currently selected testcase
+ * (if any)
  * @param props Component props
  */
 const InfoPane = (props: InfoPaneProps) => {
@@ -321,38 +355,47 @@ const InfoPane = (props: InfoPaneProps) => {
 }
 
 interface NavBreadcrumbsProps {
-  selection: string | undefined
+  selection: Array<string>
 }
 
 const NavBreadcrumbs = (props: NavBreadcrumbsProps) => {
-  const selection = props.selection ? props.selection.split("/") : [];
-  const numSelected = selection.length;
-  const history = useHistory();
+  const numSelected = props.selection.length;
 
   if (!numSelected) {
     return (
       <Breadcrumb>
-        <BreadcrumbItem><FontAwesomeIcon icon={faHome} /></BreadcrumbItem>
+        <BreadcrumbItem key="home">
+          <FontAwesomeIcon icon={faHome} />
+        </BreadcrumbItem>
       </Breadcrumb>
     );
   }
 
-  const currSelected = selection[numSelected - 1];
-  const restSelected = selection.slice(0, numSelected - 1);
+  const currSelected = props.selection[numSelected - 1];
+  const restSelected = props.selection.slice(0, numSelected - 1);
 
   return (
     <Breadcrumb>
-      <BreadcrumbItem>
-        <FontAwesomeIcon
-          icon={faHome}
-          onClick={() => history.push("/")}
-        />
+      <BreadcrumbItem key="home">
+        <Link to="/">
+          <FontAwesomeIcon icon={faHome} />
+        </Link>
       </BreadcrumbItem>
       {
         restSelected.map(
           (nodeid: string, index: number) => (
-            <BreadcrumbItem>
-              <Link to={"/" + selection.slice(0, index).join("/")} />
+            <BreadcrumbItem key={nodeid}>
+              <Link
+                to={
+                  "/" +
+                  props.selection
+                    .slice(0, index + 1)
+                    .map(encodeURIComponent)
+                    .join("/")
+                }
+              >
+                {nodeid}
+              </Link>
             </BreadcrumbItem>
           )
         )
