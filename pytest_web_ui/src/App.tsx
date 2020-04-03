@@ -8,12 +8,22 @@ import { faHome, faPlay } from '@fortawesome/free-solid-svg-icons';
 import io from 'socket.io-client';
 import {
   HashRouter as Router,
-  Switch,
   Route,
   Link,
   useLocation,
 } from "react-router-dom";
 import { StyleSheet, css } from "aphrodite";
+
+// CONSTANTS
+// Commented out until used.
+
+//const GREEN = '#228F1D';
+//const RED = '#A2000C';
+//const ORANGE = '#FFA500';
+const LIGHT_GREY = '#F3F3F3';
+//const MEDIUM_GREY = '#D0D0D0';
+//const DARK_GREY = '#ADADAD';
+//const BLACK = '#404040';
 
 interface BranchNode {
   nodeid: string,
@@ -41,25 +51,19 @@ interface UpdateData {
 const App = () => {
   return (
     <Router>
-      <Switch>
-        <Route path="/:selection"
-          render={
-            ({ match }) => <TestRunner
-              selection={[decodeURIComponent(match.params.selection)]}
-              url={match.url}
-            />
+      <Route path="/"
+        render={
+          ({ location }) => {
+            console.log(location);
+            return <TestRunner url={location.pathname} />;
           }
-        />
-        <Route path="/">
-          <TestRunner selection={[]} url="" />
-        </Route>
-      </Switch>
+        }
+      />
     </Router>
   );
 };
 
 interface AppProps {
-  selection: Array<string>,
   url: string,
 }
 
@@ -100,7 +104,6 @@ class TestRunner extends React.Component<AppProps, AppState> {
    * @param data Update data received over socket
    */
   handleUpdate(data: UpdateData) {
-
     const root = this.state.resultTree;
     if (!root) {
       return;
@@ -127,37 +130,38 @@ class TestRunner extends React.Component<AppProps, AppState> {
   }
 
   render() {
+    console.log(this.props.url);
+    const selection = parseSelection(this.props.url);
+    console.log(selection);
     const selectedBranch = getSelectedBranch(
-      this.props.selection,
+      selection,
       this.state.resultTree,
     );
+    console.log(this.state.resultTree);
 
     return (
-      <Switch>
-        <Route
-          path={`${this.props.url}/:selection`}
-          render={
-            ({ match }) => <TestRunner
-              selection={
-                this.props.selection.concat(
-                  [decodeURIComponent(match.params.selection)]
-                )
-              }
-              url={match.url}
-            />
-          }
-        />
-        <Route path={this.props.url}>
-          <TestRunnerDisplay
-            selectedBranch={selectedBranch}
-            selection={this.props.selection}
-            handleTestRun={this.handleTestRun}
-          />
-        </Route>
-      </Switch>
+      <TestRunnerDisplay
+        selectedBranch={selectedBranch}
+        selection={selection}
+        handleTestRun={this.handleTestRun}
+      />
     );
   }
 }
+
+/**
+ * Parse the current URL path (excluding query parameters) and return the
+ * nodeids of the currently selected branches.
+ * @param url URL path string
+ */
+const parseSelection = (url: string): Array<string> => {
+  const trimmedPath = url.replace(/^\/+|\/+$/g, '');
+  if (trimmedPath.length === 0) {
+    return [];
+  }
+  const pathElements = trimmedPath.split("/");
+  return pathElements.map(decodeURIComponent);
+};
 
 interface TestRunnerDisplayProps {
   selectedBranch: BranchNode | null,
@@ -333,6 +337,7 @@ const NavBranchEntries = (props: NavBranchEntriesProps) => (
                 e.stopPropagation();
                 props.handleTestRun(nodeid);
               }}
+              className={css(styles.runButton)}
             />
           </ListGroupItem>
         )
@@ -376,6 +381,7 @@ const NavLeafEntries = (props: NavLeafEntriesProps) => (
                   e.stopPropagation();
                   props.handleTestRun(nodeid);
                 }}
+                className={css(styles.runButton)}
               />
             </ListGroupItem>
           );
@@ -473,7 +479,7 @@ const styles = StyleSheet.create({
     "left": 0,
     "overflow-x": "hidden",
     padding: "20px",
-    background: "#F3F3F3",
+    background: LIGHT_GREY,
   },
   navLabel: {
     display: "inline-block",
@@ -486,6 +492,14 @@ const styles = StyleSheet.create({
     "margin-left": COLWIDTH,
     padding: "10px 10px",
   },
+  runButton: {
+    cursor: 'pointer',
+    color: 'black',
+    transition: 'all 0.3s ease-out 0s',
+    ':hover': {
+      color: LIGHT_GREY
+    }
+  }
 });
 
 export default App;
