@@ -14,6 +14,7 @@ import {
   Link,
   useLocation,
 } from "react-router-dom";
+import { StyleSheet, css } from "aphrodite";
 
 interface BranchNode {
   nodeid: string,
@@ -66,7 +67,6 @@ interface AppProps {
 interface AppState {
   resultTree: BranchNode | null,
   loading: boolean,
-  sidebarOpen: boolean,
   socket: SocketIOClient.Socket | null,
 }
 
@@ -76,10 +76,8 @@ class TestRunner extends React.Component<AppProps, AppState> {
     this.state = {
       resultTree: null,
       loading: false,
-      sidebarOpen: true,
       socket: null,
     }
-    this.onSetSidebarOpen = this.onSetSidebarOpen.bind(this);
     this.handleUpdate = this.handleUpdate.bind(this);
     this.handleTestRun = this.handleTestRun.bind(this);
   }
@@ -96,10 +94,6 @@ class TestRunner extends React.Component<AppProps, AppState> {
     axios.get("/api/v1/result-tree").then(response => {
       this.setState({ resultTree: response.data, loading: false });
     });
-  }
-
-  onSetSidebarOpen(open: boolean) {
-    this.setState({ sidebarOpen: open })
   }
 
   /**
@@ -195,7 +189,13 @@ const TestRunnerDisplay = (props: TestRunnerDisplayProps) => {
       }
       open={true}
       docked={true}
-      styles={{ sidebar: { background: "white" } }}
+      styles={{
+        sidebar: {
+          background: "white",
+          transition: "none",
+          webkitTransition: "none",
+        }
+      }}
     >
       <NavBreadcrumbs selection={props.selection} />
       <InfoPane selectedLeaf={selectedLeaf} />
@@ -292,19 +292,93 @@ const NavColumn = (props: NavColumnProps) => {
   const childLeaves = Object.keys(props.selectedBranch.child_leaves);
 
   return (
-    <ListGroup>
-      {
-        childBranches.map(
-          (nodeid: string) => (
-            <ListGroupItem key={nodeid}>
-              <Link to={
-                props.selection
-                  .concat([nodeid])
-                  .map(encodeURIComponent)
-                  .join("/")
-              }>
+    <ListGroup className={css(styles.navColumn)}>
+      <NavBranchEntries
+        childBranches={childBranches}
+        selection={props.selection}
+        handleTestRun={props.handleTestRun}
+      />
+      <NavLeafEntries
+        childLeaves={childLeaves}
+        handleTestRun={props.handleTestRun}
+        selectedLeafID={props.selectedLeafID}
+      />
+    </ListGroup>
+  );
+};
+
+interface NavBranchEntriesProps {
+  childBranches: Array<string>,
+  selection: Array<string>,
+  handleTestRun: (nodeid: string) => void,
+}
+
+/**
+ * Render entries in the nav column for branch nodes that are children of the
+ * currently selected node.
+ * @param props Render props
+ */
+const NavBranchEntries = (props: NavBranchEntriesProps) => (
+  <>
+    {
+      props.childBranches.map(
+        (nodeid: string) => (
+          <ListGroupItem key={nodeid}>
+            <span className={css(styles.navLabel)}>
+              <Link
+                to={
+                  props.selection
+                    .concat([nodeid])
+                    .map(encodeURIComponent)
+                    .join("/")
+                }
+              >
                 {nodeid}
               </Link>
+            </span>
+            <FontAwesomeIcon
+              icon={faPlay}
+              onClick={(e: React.MouseEvent) => {
+                e.stopPropagation();
+                props.handleTestRun(nodeid);
+              }}
+            />
+          </ListGroupItem>
+        )
+      )
+    }
+  </>
+);
+
+interface NavLeafEntriesProps {
+  childLeaves: Array<string>,
+  selectedLeafID: string | null,
+  handleTestRun: (nodeid: string) => void,
+}
+
+/**
+ * Render entries in the navigation column for child leaves of the currently
+ * selected node.
+ * @param props Render props
+ */
+const NavLeafEntries = (props: NavLeafEntriesProps) => (
+  <>
+    {
+      props.childLeaves.map(
+        (nodeid: string) => {
+          const label = (nodeid === props.selectedLeafID) ?
+            nodeid :
+            (
+              <Link
+                to={`?selectedLeaf=${encodeURIComponent(nodeid)}`}
+              >
+                {nodeid}
+              </Link>
+            );
+
+          return (
+            <ListGroupItem key={nodeid}>
+              <span className={css(styles.navLabel)}>{label}</span>
               <FontAwesomeIcon
                 icon={faPlay}
                 onClick={(e: React.MouseEvent) => {
@@ -313,42 +387,12 @@ const NavColumn = (props: NavColumnProps) => {
                 }}
               />
             </ListGroupItem>
-          )
-        )
-      }
-      {
-        childLeaves.map(
-          (nodeid: string) => {
-            const label = (nodeid === props.selectedLeafID) ?
-              nodeid :
-              (
-                <Link
-                  to={`?selectedLeaf=${encodeURIComponent(nodeid)}`}
-                >
-                  {nodeid}
-                </Link>
-              );
-
-            return (
-              <ListGroupItem
-                key={nodeid}
-              >
-                {label}
-                <FontAwesomeIcon
-                  icon={faPlay}
-                  onClick={(e: React.MouseEvent) => {
-                    e.stopPropagation();
-                    props.handleTestRun(nodeid);
-                  }}
-                />
-              </ListGroupItem>
-            );
-          }
-        )
-      }
-    </ListGroup>
-  );
-}
+          );
+        }
+      )
+    }
+  </>
+);
 
 interface InfoPaneProps {
   selectedLeaf: LeafNode | null,
@@ -425,5 +469,16 @@ const NavBreadcrumbs = (props: NavBreadcrumbsProps) => {
 };
 
 const useQuery = () => new URLSearchParams(useLocation().search);
+
+const styles = StyleSheet.create({
+  navColumn: { width: "25em" },
+  navLabel: {
+    display: "inline-block",
+    "text-overflow": "ellipsis",
+    "white-space": "nowrap",
+    fontSize: "small",
+    width: "95%",
+  }
+});
 
 export default App;
