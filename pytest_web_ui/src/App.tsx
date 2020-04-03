@@ -3,7 +3,6 @@ import axios from 'axios';
 import {
   ListGroup, ListGroupItem, Breadcrumb, BreadcrumbItem
 } from 'reactstrap';
-import Sidebar from 'react-sidebar';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faHome, faPlay } from '@fortawesome/free-solid-svg-icons';
 import io from 'socket.io-client';
@@ -178,28 +177,18 @@ const TestRunnerDisplay = (props: TestRunnerDisplayProps) => {
     props.selectedBranch.child_leaves[selectedLeafID] : null;
 
   return (
-    <Sidebar
-      sidebar={
-        <NavColumn
-          selectedBranch={props.selectedBranch}
-          selectedLeafID={selectedLeafID}
-          selection={props.selection}
-          handleTestRun={props.handleTestRun}
-        />
-      }
-      open={true}
-      docked={true}
-      styles={{
-        sidebar: {
-          background: "white",
-          transition: "none",
-          webkitTransition: "none",
-        }
-      }}
-    >
-      <NavBreadcrumbs selection={props.selection} />
-      <InfoPane selectedLeaf={selectedLeaf} />
-    </Sidebar >
+    <div>
+      <NavColumn
+        selectedBranch={props.selectedBranch}
+        selectedLeafID={selectedLeafID}
+        selection={props.selection}
+        handleTestRun={props.handleTestRun}
+      />
+      <div className={css(styles.centrePane)}>
+        <NavBreadcrumbs selection={props.selection} />
+        <InfoPane selectedLeaf={selectedLeaf} />
+      </div>
+    </div>
   );
 };
 
@@ -292,18 +281,20 @@ const NavColumn = (props: NavColumnProps) => {
   const childLeaves = Object.keys(props.selectedBranch.child_leaves);
 
   return (
-    <ListGroup className={css(styles.navColumn)}>
-      <NavBranchEntries
-        childBranches={childBranches}
-        selection={props.selection}
-        handleTestRun={props.handleTestRun}
-      />
-      <NavLeafEntries
-        childLeaves={childLeaves}
-        handleTestRun={props.handleTestRun}
-        selectedLeafID={props.selectedLeafID}
-      />
-    </ListGroup>
+    <div className={css(styles.navColumn)}>
+      <ListGroup>
+        <NavBranchEntries
+          childBranches={childBranches}
+          selection={props.selection}
+          handleTestRun={props.handleTestRun}
+        />
+        <NavLeafEntries
+          childLeaves={childLeaves}
+          handleTestRun={props.handleTestRun}
+          selectedLeafID={props.selectedLeafID}
+        />
+      </ListGroup>
+    </div>
   );
 };
 
@@ -470,15 +461,31 @@ const NavBreadcrumbs = (props: NavBreadcrumbsProps) => {
 
 const useQuery = () => new URLSearchParams(useLocation().search);
 
+const COLWIDTH = "25em";
+
 const styles = StyleSheet.create({
-  navColumn: { width: "25em" },
+  navColumn: {
+    height: "100%",
+    width: COLWIDTH,
+    position: "fixed",
+    "z-index": 1,
+    "top": 0,
+    "left": 0,
+    "overflow-x": "hidden",
+    padding: "20px",
+    background: "#F3F3F3",
+  },
   navLabel: {
     display: "inline-block",
     "text-overflow": "ellipsis",
     "white-space": "nowrap",
     fontSize: "small",
     width: "95%",
-  }
+  },
+  centrePane: {
+    "margin-left": COLWIDTH,
+    padding: "10px 10px",
+  },
 });
 
 export default App;

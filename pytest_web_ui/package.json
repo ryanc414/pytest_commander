@@ -25,7 +25,6 @@
     "react-dom": "^16.13.0",
     "react-router-dom": "^5.1.2",
     "react-scripts": "3.4.0",
-    "react-sidebar": "^3.0.2",
     "reactstrap": "^8.4.1",
     "socket.io-client": "^2.3.0",
     "typescript": "^3.7.5"
