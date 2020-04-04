@@ -6,10 +6,15 @@
 import React from 'react';
 import { Breadcrumb, BreadcrumbItem } from 'reactstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHome } from '@fortawesome/free-solid-svg-icons';
+import {
+  faHome,
+  faCheckCircle,
+  faTimesCircle,
+} from '@fortawesome/free-solid-svg-icons';
 import { Link } from "react-router-dom";
 
 import { LeafNode } from "./Common";
+import { css, StyleSheet } from 'aphrodite';
 
 interface InfoPaneProps {
   selectedLeaf: LeafNode | null,
@@ -25,24 +30,51 @@ export const InfoPane = (props: InfoPaneProps) => {
     return <div>Please select a test.</div>
   }
 
+  console.log(props.selectedLeaf.longrepr);
+
   return (
     <>
-      <div>{"nodeid: " + props.selectedLeaf.nodeid}</div>
-      <div>{"status: " + props.selectedLeaf.status}</div>
-      <div>{"longrepr: " + props.selectedLeaf.longrepr}</div>
+      <div>
+        <span className={css(styles.title)}>{props.selectedLeaf.nodeid}</span>
+        <span className={css(styles.statusIcon)}>
+          {getStatusIcon(props.selectedLeaf.status)}
+        </span>
+      </div>
+      <div className={css(styles.longrepr)}>{props.selectedLeaf.longrepr}</div>
     </>
   )
 }
+
+/**
+ * Return an icon for the given test node status.
+ * @param status Node status
+ */
+const getStatusIcon = (status: string) => {
+  switch (status) {
+    case "passed":
+      return (
+        <FontAwesomeIcon icon={faCheckCircle} color="green" />
+      );
+
+    case "failed":
+      return (
+        <FontAwesomeIcon icon={faTimesCircle} color="red" />
+      );
+
+    default:
+      return null;
+  }
+};
 
 interface NavBreadcrumbsProps {
   selection: Array<string>
 }
 
 /**
- * Navigation breadcrumb menu, used to show the current position in the test
- * tree and to navigate back up to any parent branch node.
- * @param props Render props
- */
+* Navigation breadcrumb menu, used to show the current position in the test
+* tree and to navigate back up to any parent branch node.
+* @param props Render props
+*/
 export const NavBreadcrumbs = (props: NavBreadcrumbsProps) => {
   const numSelected = props.selection.length;
 
@@ -89,3 +121,23 @@ export const NavBreadcrumbs = (props: NavBreadcrumbsProps) => {
     </Breadcrumb>
   );
 };
+
+const styles = StyleSheet.create({
+  title: {
+    fontSize: "large",
+    "font-weight": "bold",
+    //"width": "80%",
+    //display: "inline-block",
+    "text-overflow": "ellipsis",
+    "white-space": "nowrap",
+    "padding": "10px",
+  },
+  statusIcon: {
+    "float": "right"
+  },
+  longrepr: {
+    "white-space": "pre-line",
+    "font-family": "monospace",
+    "padding": "10px",
+  }
+});
