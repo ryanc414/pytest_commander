@@ -21,7 +21,7 @@ import { StyleSheet, css } from "aphrodite";
 //const RED = '#A2000C';
 //const ORANGE = '#FFA500';
 const LIGHT_GREY = '#F3F3F3';
-//const MEDIUM_GREY = '#D0D0D0';
+const MEDIUM_GREY = '#D0D0D0';
 //const DARK_GREY = '#ADADAD';
 //const BLACK = '#404040';
 
@@ -281,19 +281,16 @@ const NavColumn = (props: NavColumnProps) => {
     return <span>Loading...</span>;
   }
 
-  const childBranches = Object.keys(props.selectedBranch.child_branches);
-  const childLeaves = Object.keys(props.selectedBranch.child_leaves);
-
   return (
     <div className={css(styles.navColumn)}>
       <ListGroup>
         <NavBranchEntries
-          childBranches={childBranches}
+          selectedBranch={props.selectedBranch}
           selection={props.selection}
           handleTestRun={props.handleTestRun}
         />
         <NavLeafEntries
-          childLeaves={childLeaves}
+          selectedBranch={props.selectedBranch}
           handleTestRun={props.handleTestRun}
           selectedLeafID={props.selectedLeafID}
         />
@@ -303,7 +300,7 @@ const NavColumn = (props: NavColumnProps) => {
 };
 
 interface NavBranchEntriesProps {
-  childBranches: Array<string>,
+  selectedBranch: BranchNode,
   selection: Array<string>,
   handleTestRun: (nodeid: string) => void,
 }
@@ -313,68 +310,31 @@ interface NavBranchEntriesProps {
  * currently selected node.
  * @param props Render props
  */
-const NavBranchEntries = (props: NavBranchEntriesProps) => (
-  <>
-    {
-      props.childBranches.map(
-        (nodeid: string) => (
-          <ListGroupItem key={nodeid}>
-            <span className={css(styles.navLabel)}>
-              <Link
-                to={
-                  props.selection
-                    .concat([nodeid])
-                    .map(encodeURIComponent)
-                    .join("/")
-                }
-              >
-                {nodeid}
-              </Link>
-            </span>
-            <FontAwesomeIcon
-              icon={faPlay}
-              onClick={(e: React.MouseEvent) => {
-                e.stopPropagation();
-                props.handleTestRun(nodeid);
-              }}
-              className={css(styles.runButton)}
-            />
-          </ListGroupItem>
-        )
-      )
-    }
-  </>
-);
-
-interface NavLeafEntriesProps {
-  childLeaves: Array<string>,
-  selectedLeafID: string | null,
-  handleTestRun: (nodeid: string) => void,
-}
-
-/**
- * Render entries in the navigation column for child leaves of the currently
- * selected node.
- * @param props Render props
- */
-const NavLeafEntries = (props: NavLeafEntriesProps) => (
-  <>
-    {
-      props.childLeaves.map(
-        (nodeid: string) => {
-          const label = (nodeid === props.selectedLeafID) ?
-            nodeid :
-            (
-              <Link
-                to={`?selectedLeaf=${encodeURIComponent(nodeid)}`}
-              >
-                {nodeid}
-              </Link>
-            );
-
-          return (
-            <ListGroupItem key={nodeid}>
-              <span className={css(styles.navLabel)}>{label}</span>
+const NavBranchEntries = (props: NavBranchEntriesProps) => {
+  const childBranches = Object.keys(props.selectedBranch.child_branches);
+  return (
+    <>
+      {
+        childBranches.map(
+          (nodeid: string) => (
+            <ListGroupItem
+              key={nodeid}
+              className={css(getNavEntryStyle(
+                props.selectedBranch.child_branches[nodeid].status
+              ))}
+            >
+              <span className={css(styles.navLabel)}>
+                <Link
+                  to={
+                    props.selection
+                      .concat([nodeid])
+                      .map(encodeURIComponent)
+                      .join("/")
+                  }
+                >
+                  {nodeid}
+                </Link>
+              </span>
               <FontAwesomeIcon
                 icon={faPlay}
                 onClick={(e: React.MouseEvent) => {
@@ -384,12 +344,79 @@ const NavLeafEntries = (props: NavLeafEntriesProps) => (
                 className={css(styles.runButton)}
               />
             </ListGroupItem>
-          );
-        }
-      )
-    }
-  </>
-);
+          )
+        )
+      }
+    </>
+  );
+};
+
+interface NavLeafEntriesProps {
+  selectedBranch: BranchNode,
+  selectedLeafID: string | null,
+  handleTestRun: (nodeid: string) => void,
+}
+
+/**
+ * Render entries in the navigation column for child leaves of the currently
+ * selected node.
+ * @param props Render props
+ */
+const NavLeafEntries = (props: NavLeafEntriesProps) => {
+  const childLeaves = Object.keys(props.selectedBranch.child_leaves);
+
+  return (
+    <>
+      {
+        childLeaves.map(
+          (nodeid: string) => {
+            const label = (nodeid === props.selectedLeafID) ?
+              nodeid :
+              (
+                <Link
+                  to={`?selectedLeaf=${encodeURIComponent(nodeid)}`}
+                >
+                  {nodeid}
+                </Link>
+              );
+
+            return (
+              <ListGroupItem
+                key={nodeid}
+                className={css(getNavEntryStyle(
+                  props.selectedBranch.child_leaves[nodeid].status
+                ))}
+              >
+                <span className={css(styles.navLabel)}>{label}</span>
+                <FontAwesomeIcon
+                  icon={faPlay}
+                  onClick={(e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    props.handleTestRun(nodeid);
+                  }}
+                  className={css(styles.runButton)}
+                />
+              </ListGroupItem>
+            );
+          }
+        )
+      }
+    </>
+  );
+};
+
+const getNavEntryStyle = (status: string) => {
+  switch (status) {
+    case "passed":
+      return styles.navEntryPassed;
+
+    case "failed":
+      return styles.navEntryFailed;
+
+    default:
+      return styles.navEntryDefault;
+  }
+}
 
 interface InfoPaneProps {
   selectedLeaf: LeafNode | null,
@@ -499,7 +526,10 @@ const styles = StyleSheet.create({
     ':hover': {
       color: LIGHT_GREY
     }
-  }
+  },
+  navEntryPassed: { background: "#c0ffbf" },
+  navEntryFailed: { background: "#ff7a7a" },
+  navEntryDefault: { background: MEDIUM_GREY },
 });
 
 export default App;
