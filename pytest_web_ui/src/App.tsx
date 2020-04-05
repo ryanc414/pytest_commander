@@ -7,15 +7,11 @@ import {
   useLocation,
 } from "react-router-dom";
 import { StyleSheet, css } from "aphrodite";
+import _ from "lodash";
 
 import { COLWIDTH, BranchNode, LeafNode } from "./Common";
 import { NavColumn } from "./NavColumn";
 import { NavBreadcrumbs, InfoPane } from "./CentrePane";
-
-interface UpdateData {
-  node: LeafNode | BranchNode,
-  is_leaf: boolean,
-}
 
 /**
  * Top level App component.
@@ -84,16 +80,14 @@ class TestRunner extends React.Component<TestRunnerProps, TestRunnerState> {
    * Handle an update event received over a websocket.
    * @param data Update data received over socket
    */
-  handleUpdate(data: UpdateData) {
+  handleUpdate(data: BranchNode) {
     const root = this.state.resultTree;
     if (!root) {
       return;
     }
 
     this.setState((state) => {
-      const newTree = updateResultTree(
-        root, data.node.parent_nodeids, data,
-      );
+      const newTree = updateResultTree(root, data);
       return { resultTree: newTree };
     });
   }
@@ -152,41 +146,12 @@ const parseSelection = (url: string): Array<string> => {
  * @param updateData Update data for new node
  */
 const updateResultTree = (
-  currNode: BranchNode, parentNodeIds: Array<string>, updateData: UpdateData
+  currRoot: BranchNode, updateData: BranchNode
 ): BranchNode => {
-  if (parentNodeIds.length > 0) {
-    const head = parentNodeIds[0];
-    const tail = parentNodeIds.slice(1, parentNodeIds.length);
-
-    const childBranches = { ...currNode.child_branches };
-    childBranches[head] = updateResultTree(
-      currNode.child_branches[head], tail, updateData
-    );
-    const ret = {
-      ...currNode,
-      child_branches: childBranches,
-    };
-    return ret;
-  }
-
-  if (updateData.is_leaf) {
-    const childLeaves = { ...currNode.child_leaves };
-    childLeaves[updateData.node.nodeid] = (updateData.node as LeafNode);
-    const ret = {
-      ...currNode,
-      child_leaves: childLeaves,
-    };
-    return ret;
-  } else {
-    const childBranches = { ...currNode.child_branches };
-    childBranches[updateData.node.nodeid] = (updateData.node as BranchNode);
-    const ret = {
-      ...currNode,
-      child_branches: childBranches,
-    };
-    return ret;
-  }
-}
+  const newRoot = { ...currRoot };
+  _.merge(newRoot, updateData);
+  return newRoot;
+};
 
 interface TestRunnerDisplayProps {
   selectedBranch: BranchNode | null,

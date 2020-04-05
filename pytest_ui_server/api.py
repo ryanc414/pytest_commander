@@ -23,6 +23,7 @@ def build_app(directory: str) -> Tuple[flask.Flask, flask_socketio.SocketIO]:
     app = flask.Flask(__name__, root_path=build_dir, static_folder=static_dir)
     test_runner = runner.PyTestRunner(directory)
     branch_schema = result_tree.BranchNodeSchema()
+    shallow_branch_schema = result_tree.NodeSchema()
     leaf_schema = result_tree.LeafNodeSchema()
     socketio = flask_socketio.SocketIO(app)
 
@@ -44,18 +45,19 @@ def build_app(directory: str) -> Tuple[flask.Flask, flask_socketio.SocketIO]:
         LOGGER.info("Running test: %s", nodeid)
 
         def update_callback(result: result_tree.Node):
+            parents_slice, parent_node = _serialize_parents_slice(result)
+
             if isinstance(result, result_tree.BranchNode):
-                serialized_result = branch_schema.dump(result)
-                is_leaf = False
+                serialized_result = shallow_branch_schema.dump(result)
+                parent_node["child_branches"] = {result.nodeid: serialized_result}
             elif isinstance(result, result_tree.LeafNode):
                 serialized_result = leaf_schema.dump(result)
-                is_leaf = True
+                parent_node["child_leaves"] = {result.nodeid: serialized_result}
             else:
                 raise TypeError(f"Unexpected result type: {type(result)}")
 
-            flask_socketio.emit(
-                "update", {"is_leaf": is_leaf, "node": serialized_result}
-            )
+            LOGGER.debug("Sending update for nodeid %s", result.nodeid)
+            flask_socketio.emit("update", parents_slice)
 
         test_runner.run_tests(nodeid, update_callback)
 
@@ -66,5 +68,21 @@ def build_app(directory: str) -> Tuple[flask.Flask, flask_socketio.SocketIO]:
     @socketio.on("disconnect")
     def disconnect():
         LOGGER.debug("Client disconnected")
+
+    def _serialize_parents_slice(
+        result_node: result_tree.Node,
+    ) -> Tuple[Dict[str, any], Dict[str, any]]:
+        """Serialize a slice of the tree from root to the given result node."""
+        serialized_root = shallow_branch_schema._serialize(test_runner.result_tree)
+        curr_serialized_node = serialized_root
+        curr_node = test_runner.result_tree
+
+        for uid in result_node.parent_nodeids:
+            curr_node = curr_node.child_branches[uid]
+            serialized_child = shallow_branch_schema._serialize(curr_node)
+            curr_serialized_node["child_branches"] = {uid: serialized_child}
+            curr_serialized_node = serialized_child
+
+        return serialized_root, curr_serialized_node
 
     return app, socketio

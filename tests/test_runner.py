@@ -46,3 +46,10 @@ def test_run_tests():
         nodeid = f"pytest_examples/test_a.py::{test_id}"
         node = runner_inst._result_index[nodeid]
         assert node.report is not None
+        assert node.status in (
+            result_tree.TestState.PASSED,
+            result_tree.TestState.FAILED,
+        )
+
+    node = runner_inst._result_index["pytest_examples/test_a.py"]
+    assert node.status == result_tree.TestState.FAILED

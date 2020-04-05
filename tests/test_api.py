@@ -43,12 +43,23 @@ _EXPECTED_RCVD = [
     {
         "args": [
             {
-                "is_leaf": True,
-                "node": {
-                    "parent_nodeids": ["pytest_examples/test_a.py"],
-                    "longrepr": None,
-                    "nodeid": "pytest_examples/test_a.py::test_one",
-                    "status": "running",
+                "nodeid": "",
+                "parent_nodeids": [],
+                "status": "running",
+                "child_branches": {
+                    "pytest_examples/test_a.py": {
+                        "nodeid": "pytest_examples/test_a.py",
+                        "parent_nodeids": [],
+                        "status": "running",
+                        "child_leaves": {
+                            "pytest_examples/test_a.py::test_one": {
+                                "nodeid": "pytest_examples/test_a.py::test_one",
+                                "parent_nodeids": ["pytest_examples/test_a.py"],
+                                "status": "running",
+                                "longrepr": None,
+                            }
+                        },
+                    }
                 },
             }
         ],
@@ -58,12 +69,23 @@ _EXPECTED_RCVD = [
     {
         "args": [
             {
-                "is_leaf": True,
-                "node": {
-                    "parent_nodeids": ["pytest_examples/test_a.py"],
-                    "longrepr": None,
-                    "nodeid": "pytest_examples/test_a.py::test_one",
-                    "status": "passed",
+                "nodeid": "",
+                "parent_nodeids": [],
+                "status": "passed",
+                "child_branches": {
+                    "pytest_examples/test_a.py": {
+                        "nodeid": "pytest_examples/test_a.py",
+                        "parent_nodeids": [],
+                        "status": "passed",
+                        "child_leaves": {
+                            "pytest_examples/test_a.py::test_one": {
+                                "nodeid": "pytest_examples/test_a.py::test_one",
+                                "parent_nodeids": ["pytest_examples/test_a.py"],
+                                "status": "passed",
+                                "longrepr": None,
+                            }
+                        },
+                    }
                 },
             }
         ],
@@ -79,3 +101,13 @@ def test_run_test(clients):
     rcvd = socket_client.get_received()
     assert len(rcvd) == 2
     assert rcvd == _EXPECTED_RCVD
+    json_filepath = os.path.join(
+        os.path.dirname(__file__), os.pardir, "test_data", "test_run_update.json"
+    )
+    with open(json_filepath, "w") as f:
+        json.dump(_EXPECTED_RCVD, f, indent=2)
+
+    with open(json_filepath) as f:
+        expected_rcvd = json.load(f)
+
+    assert rcvd == expected_rcvd

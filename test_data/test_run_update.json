@@ -1,0 +1,58 @@
+[
+  {
+    "args": [
+      {
+        "nodeid": "",
+        "parent_nodeids": [],
+        "status": "running",
+        "child_branches": {
+          "pytest_examples/test_a.py": {
+            "nodeid": "pytest_examples/test_a.py",
+            "parent_nodeids": [],
+            "status": "running",
+            "child_leaves": {
+              "pytest_examples/test_a.py::test_one": {
+                "nodeid": "pytest_examples/test_a.py::test_one",
+                "parent_nodeids": [
+                  "pytest_examples/test_a.py"
+                ],
+                "status": "running",
+                "longrepr": null
+              }
+            }
+          }
+        }
+      }
+    ],
+    "name": "update",
+    "namespace": "/"
+  },
+  {
+    "args": [
+      {
+        "nodeid": "",
+        "parent_nodeids": [],
+        "status": "passed",
+        "child_branches": {
+          "pytest_examples/test_a.py": {
+            "nodeid": "pytest_examples/test_a.py",
+            "parent_nodeids": [],
+            "status": "passed",
+            "child_leaves": {
+              "pytest_examples/test_a.py::test_one": {
+                "nodeid": "pytest_examples/test_a.py::test_one",
+                "parent_nodeids": [
+                  "pytest_examples/test_a.py"
+                ],
+                "status": "passed",
+                "longrepr": null
+              }
+            }
+          }
+        }
+      }
+    ],
+    "name": "update",
+    "namespace": "/"
+  }
+]

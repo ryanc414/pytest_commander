@@ -73,7 +73,8 @@ class TestRunPlugin:
 
     def pytest_runtest_logreport(self, report):
         """
-        Hook called after a new test report is ready. Also called for setup/teardown.
+        Hook called after a new test report is ready. Also called for
+        setup/teardown.
         """
         # Currently do nothing for setup/teardown.
         if report.when != "call":
