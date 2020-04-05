@@ -8,7 +8,7 @@ from __future__ import annotations
 import abc
 import enum
 import textwrap
-from typing import List, Tuple, Dict, Generator, Iterator, Optional
+from typing import List, Tuple, Dict, Generator, Iterator, Optional, Any
 
 import marshmallow
 from marshmallow import fields
@@ -306,3 +306,21 @@ class BranchNodeSchema(NodeSchema):
         fields.Str(), fields.Nested(lambda: BranchNodeSchema())
     )
     child_leaves = fields.Dict(fields.Str(), fields.Nested(LeafNodeSchema()))
+
+
+def serialize_parents_slice(
+    result_node: Node, result_tree: BranchNode,
+) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    """Serialize a slice of the tree from root to the given result node."""
+    shallow_branch_schema = NodeSchema()
+    serialized_root = shallow_branch_schema._serialize(result_tree)
+    curr_serialized_node = serialized_root
+    curr_node = result_tree
+
+    for uid in result_node.parent_nodeids:
+        curr_node = curr_node.child_branches[uid]
+        serialized_child = shallow_branch_schema._serialize(curr_node)
+        curr_serialized_node["child_branches"] = {uid: serialized_child}
+        curr_serialized_node = serialized_child
+
+    return serialized_root, curr_serialized_node

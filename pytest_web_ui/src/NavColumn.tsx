@@ -99,36 +99,6 @@ const NavBranchEntries = (props: NavBranchEntriesProps) => {
   );
 };
 
-interface NavEntryIconProps {
-  nodeid: string,
-  status: string,
-  handleTestRun: (nodeid: string) => void,
-}
-
-const NavEntryIcon = (props: NavEntryIconProps) => {
-  switch (props.status) {
-    case "running":
-      return (
-        <FontAwesomeIcon
-          icon={faRedo}
-          spin
-        />
-      );
-
-    default:
-      return (
-        <FontAwesomeIcon
-          icon={faPlay}
-          onClick={(e: React.MouseEvent) => {
-            e.stopPropagation();
-            props.handleTestRun(props.nodeid);
-          }}
-          className={css(styles.runButton)}
-        />
-      );
-  }
-};
-
 interface NavLeafEntriesProps {
   selectedBranch: BranchNode,
   selectedLeafID: string | null,
@@ -164,20 +134,17 @@ const NavLeafEntries = (props: NavLeafEntriesProps) => {
                 className={
                   css(
                     getNavEntryStyle(
-                      props.selectedBranch.child_branches[nodeid].status
+                      props.selectedBranch.child_leaves[nodeid].status
                     ),
                     styles.navEntryCommon,
                   )
                 }
               >
                 <span className={css(styles.navLabel)}>{label}</span>
-                <FontAwesomeIcon
-                  icon={faPlay}
-                  onClick={(e: React.MouseEvent) => {
-                    e.stopPropagation();
-                    props.handleTestRun(nodeid);
-                  }}
-                  className={css(styles.runButton)}
+                <NavEntryIcon
+                  nodeid={nodeid}
+                  status={props.selectedBranch.child_leaves[nodeid].status}
+                  handleTestRun={props.handleTestRun}
                 />
               </ListGroupItem>
             );
@@ -186,6 +153,36 @@ const NavLeafEntries = (props: NavLeafEntriesProps) => {
       }
     </>
   );
+};
+
+interface NavEntryIconProps {
+  nodeid: string,
+  status: string,
+  handleTestRun: (nodeid: string) => void,
+}
+
+const NavEntryIcon = (props: NavEntryIconProps) => {
+  switch (props.status) {
+    case "running":
+      return (
+        <FontAwesomeIcon
+          icon={faRedo}
+          spin
+        />
+      );
+
+    default:
+      return (
+        <FontAwesomeIcon
+          icon={faPlay}
+          onClick={(e: React.MouseEvent) => {
+            e.stopPropagation();
+            props.handleTestRun(props.nodeid);
+          }}
+          className={css(styles.runButton)}
+        />
+      );
+  }
 };
 
 /**
