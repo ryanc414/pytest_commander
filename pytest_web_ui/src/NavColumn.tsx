@@ -65,9 +65,14 @@ const NavBranchEntries = (props: NavBranchEntriesProps) => {
           (nodeid: string) => (
             <ListGroupItem
               key={nodeid}
-              className={css(getNavEntryStyle(
-                props.selectedBranch.child_branches[nodeid].status
-              ))}
+              className={
+                css(
+                  getNavEntryStyle(
+                    props.selectedBranch.child_branches[nodeid].status
+                  ),
+                  styles.navEntryCommon,
+                )
+              }
             >
               <span className={css(styles.navLabel)}>
                 <Link
@@ -156,9 +161,14 @@ const NavLeafEntries = (props: NavLeafEntriesProps) => {
             return (
               <ListGroupItem
                 key={nodeid}
-                className={css(getNavEntryStyle(
-                  props.selectedBranch.child_leaves[nodeid].status
-                ))}
+                className={
+                  css(
+                    getNavEntryStyle(
+                      props.selectedBranch.child_branches[nodeid].status
+                    ),
+                    styles.navEntryCommon,
+                  )
+                }
               >
                 <span className={css(styles.navLabel)}>{label}</span>
                 <FontAwesomeIcon
@@ -208,11 +218,10 @@ const styles = StyleSheet.create({
     background: LIGHT_GREY,
   },
   navLabel: {
-    display: "inline-block",
     "text-overflow": "ellipsis",
     "white-space": "nowrap",
     fontSize: "small",
-    width: "95%",
+    "max-width": "90%",
   },
   runButton: {
     cursor: 'pointer',
@@ -225,4 +234,9 @@ const styles = StyleSheet.create({
   navEntryPassed: { background: "#c0ffbf" },
   navEntryFailed: { background: "#ff7a7a" },
   navEntryDefault: { background: MEDIUM_GREY },
+  navEntryCommon: {
+    display: "flex",
+    "justify-content": "space-between",
+    "align-items": "center",
+  }
 });
