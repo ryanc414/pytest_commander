@@ -40,7 +40,7 @@ export const InfoPane = (props: InfoPaneProps) => {
           {getStatusIcon(props.selectedLeaf.status)}
         </span>
       </div>
-      <div className={css(styles.longrepr)}>{props.selectedLeaf.longrepr}</div>
+      <pre className={css(styles.longrepr)}>{props.selectedLeaf.longrepr}</pre>
     </>
   )
 }
@@ -53,12 +53,12 @@ const getStatusIcon = (status: string) => {
   switch (status) {
     case "passed":
       return (
-        <FontAwesomeIcon icon={faCheckCircle} color="green" />
+        <FontAwesomeIcon icon={faCheckCircle} color="green" size="4x" />
       );
 
     case "failed":
       return (
-        <FontAwesomeIcon icon={faTimesCircle} color="red" />
+        <FontAwesomeIcon icon={faTimesCircle} color="red" size="4x" />
       );
 
     default:
@@ -136,8 +136,6 @@ const styles = StyleSheet.create({
     "float": "right"
   },
   longrepr: {
-    "white-space": "pre-line",
-    "font-family": "monospace",
     "padding": "10px",
   }
 });
