@@ -2,9 +2,7 @@
 import logging
 import os
 from typing import Tuple, Dict, Callable
-import queue
-import threading
-import flask_socketio
+import flask_socketio  # type: ignore
 
 import pytest  # type: ignore
 from _pytest import reports  # type: ignore
@@ -20,17 +18,9 @@ class PyTestRunner:
     def __init__(self, directory: str, socketio: flask_socketio.SocketIO):
         self._directory = directory
         self.result_tree, self._result_index = _init_result_tree(directory)
-        self._test_queue = queue.Queue()
         self._socketio = socketio
         self._branch_schema = result_tree.BranchNodeSchema()
         self._leaf_schema = result_tree.LeafNodeSchema()
-
-    def _loop(self):
-        while True:
-            full_path, add_test_report = self._test_queue.get()
-            pytest.main(
-                [full_path], plugins=[TestRunPlugin(add_test_report)],
-            )
 
     def run_tests(self, nodeid: str):
         """

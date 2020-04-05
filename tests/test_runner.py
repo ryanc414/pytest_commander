@@ -3,17 +3,24 @@ import json
 import os
 from unittest import mock
 
+import pytest
+
 from pytest_ui_server import runner
 from pytest_ui_server import result_tree
 
 
-def test_init():
+@pytest.fixture
+def pyrunner():
+    directory = os.path.join(os.path.dirname(__file__), os.pardir, "pytest_examples")
+    socketio = mock.MagicMock()
+    return runner.PyTestRunner(directory, socketio)
+
+
+def test_init(pyrunner):
     """
     Test initialising the PyTestRunner. Ensures that the expected result tree skeleton
     is built.
     """
-    directory = os.path.join(os.path.dirname(__file__), os.pardir, "pytest_examples")
-    pyrunner = runner.PyTestRunner(directory)
     schema = result_tree.BranchNodeSchema()
     serialized = schema.dump(pyrunner.result_tree)
 
@@ -27,15 +34,12 @@ def test_init():
     assert serialized == expected_serialization
 
 
-def test_run_tests():
+def test_run_tests(pyrunner):
     """
     Test running tests from a single module.
     """
-    directory = os.path.join(os.path.dirname(__file__), os.pardir, "pytest_examples")
-    runner_inst = runner.PyTestRunner(directory)
-    callback = mock.MagicMock()
-    runner_inst.run_tests("pytest_examples/test_a.py", callback)
-    assert callback.call_count == 5
+    pyrunner._run_test("pytest_examples/test_a.py")
+    pyrunner._socketio.emit.assert_called_once()
 
     for test_id in (
         "test_one",
@@ -44,12 +48,12 @@ def test_run_tests():
         "TestSuite::test_beta",
     ):
         nodeid = f"pytest_examples/test_a.py::{test_id}"
-        node = runner_inst._result_index[nodeid]
+        node = pyrunner._result_index[nodeid]
         assert node.report is not None
         assert node.status in (
             result_tree.TestState.PASSED,
             result_tree.TestState.FAILED,
         )
 
-    node = runner_inst._result_index["pytest_examples/test_a.py"]
+    node = pyrunner._result_index["pytest_examples/test_a.py"]
     assert node.status == result_tree.TestState.FAILED
