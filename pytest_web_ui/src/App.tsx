@@ -9,7 +9,7 @@ import {
 import { StyleSheet, css } from "aphrodite";
 import _ from "lodash";
 
-import { COLWIDTH, BranchNode, LeafNode } from "./Common";
+import { COLWIDTH, BranchNode } from "./Common";
 import { NavColumn } from "./NavColumn";
 import { NavBreadcrumbs, InfoPane } from "./CentrePane";
 
@@ -57,6 +57,7 @@ class TestRunner extends React.Component<TestRunnerProps, TestRunnerState> {
    * make an API call to get the result tree.
    */
   componentDidMount() {
+    console.log("INIT WEBSOCKET");
     const socket = io();
     this.setState({ loading: true, socket: socket }, () => {
       socket.on('update', this.handleUpdate);
@@ -80,6 +81,9 @@ class TestRunner extends React.Component<TestRunnerProps, TestRunnerState> {
    * @param data Update data received over socket
    */
   handleUpdate(data: BranchNode) {
+    console.log("Handling websocket update");
+    console.log(data);
+
     const root = this.state.resultTree;
     if (!root) {
       return;

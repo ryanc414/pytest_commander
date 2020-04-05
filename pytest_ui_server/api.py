@@ -21,11 +21,11 @@ def build_app(directory: str) -> Tuple[flask.Flask, flask_socketio.SocketIO]:
     index_file = os.path.join(build_dir, "index.html")
 
     app = flask.Flask(__name__, root_path=build_dir, static_folder=static_dir)
-    test_runner = runner.PyTestRunner(directory)
     branch_schema = result_tree.BranchNodeSchema()
     shallow_branch_schema = result_tree.NodeSchema()
     leaf_schema = result_tree.LeafNodeSchema()
     socketio = flask_socketio.SocketIO(app)
+    test_runner = runner.PyTestRunner(directory, socketio)
 
     @app.route("/")
     def index():
@@ -57,7 +57,7 @@ def build_app(directory: str) -> Tuple[flask.Flask, flask_socketio.SocketIO]:
                 raise TypeError(f"Unexpected result type: {type(result)}")
 
             LOGGER.debug("Sending update for nodeid %s", result.nodeid)
-            flask_socketio.emit("update", parents_slice)
+            socketio.emit("update", parents_slice)
 
         test_runner.run_tests(nodeid, update_callback)
 

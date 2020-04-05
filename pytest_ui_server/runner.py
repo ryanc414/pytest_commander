@@ -1,6 +1,9 @@
 """PyTestRunner class and related functions."""
 import os
 from typing import Tuple, Dict, Callable
+import queue
+import threading
+import flask_socketio
 
 import pytest  # type: ignore
 from _pytest import reports  # type: ignore
@@ -11,9 +14,18 @@ from pytest_ui_server import result_tree
 class PyTestRunner:
     """Owns the test result tree and handles running tests and updating the results."""
 
-    def __init__(self, directory: str):
+    def __init__(self, directory: str, socketio: flask_socketio.SocketIO):
         self._directory = directory
         self.result_tree, self._result_index = _init_result_tree(directory)
+        self._test_queue = queue.Queue()
+        self._socketio = socketio
+
+    def _loop(self):
+        while True:
+            full_path, add_test_report = self._test_queue.get()
+            pytest.main(
+                [full_path], plugins=[TestRunPlugin(add_test_report)],
+            )
 
     def run_tests(
         self, nodeid: str, updates_callback: Callable[[result_tree.Node], None]
@@ -34,10 +46,12 @@ class PyTestRunner:
             updates_callback(result_node)
 
         full_path = nodeid.replace("/", os.sep)
-
-        pytest.main(
-            [full_path], plugins=[TestRunPlugin(add_test_report)],
+        self._socketio.start_background_task(
+            self._run_test, full_path, add_test_report,
         )
+
+    def _run_test(self, full_path, add_test_report):
+        pytest.main([full_path], plugins=[TestRunPlugin(add_test_report)])
 
 
 def _init_result_tree(

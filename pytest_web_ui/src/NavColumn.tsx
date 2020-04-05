@@ -5,7 +5,7 @@
 import React from 'react';
 import { ListGroup, ListGroupItem } from 'reactstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlay } from '@fortawesome/free-solid-svg-icons';
+import { faPlay, faRedo } from '@fortawesome/free-solid-svg-icons';
 import { Link } from "react-router-dom";
 import { StyleSheet, css } from "aphrodite";
 
@@ -81,13 +81,10 @@ const NavBranchEntries = (props: NavBranchEntriesProps) => {
                   {nodeid}
                 </Link>
               </span>
-              <FontAwesomeIcon
-                icon={faPlay}
-                onClick={(e: React.MouseEvent) => {
-                  e.stopPropagation();
-                  props.handleTestRun(nodeid);
-                }}
-                className={css(styles.runButton)}
+              <NavEntryIcon
+                nodeid={nodeid}
+                status={props.selectedBranch.child_branches[nodeid].status}
+                handleTestRun={props.handleTestRun}
               />
             </ListGroupItem>
           )
@@ -95,6 +92,36 @@ const NavBranchEntries = (props: NavBranchEntriesProps) => {
       }
     </>
   );
+};
+
+interface NavEntryIconProps {
+  nodeid: string,
+  status: string,
+  handleTestRun: (nodeid: string) => void,
+}
+
+const NavEntryIcon = (props: NavEntryIconProps) => {
+  switch (props.status) {
+    case "running":
+      return (
+        <FontAwesomeIcon
+          icon={faRedo}
+          spin
+        />
+      );
+
+    default:
+      return (
+        <FontAwesomeIcon
+          icon={faPlay}
+          onClick={(e: React.MouseEvent) => {
+            e.stopPropagation();
+            props.handleTestRun(props.nodeid);
+          }}
+          className={css(styles.runButton)}
+        />
+      );
+  }
 };
 
 interface NavLeafEntriesProps {
