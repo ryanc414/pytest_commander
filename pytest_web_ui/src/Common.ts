@@ -15,7 +15,7 @@ export const MEDIUM_GREY = '#D0D0D0';
 export const COLWIDTH = "25em";
 
 export interface BranchNode {
-  nodeid: string,
+  short_id: string,
   status: string,
   parent_nodeids: Array<string>,
   child_branches: { [key: string]: BranchNode },
@@ -23,7 +23,7 @@ export interface BranchNode {
 }
 
 export interface LeafNode {
-  nodeid: string,
+  short_id: string,
   status: string,
   parent_nodeids: Array<string>,
   longrepr: string,

@@ -1,58 +1,64 @@
 [
   {
+    "name": "update",
     "args": [
       {
+        "parent_ids": [],
         "nodeid": "",
-        "parent_nodeids": [],
+        "short_id": "",
         "status": "running",
         "child_branches": {
           "pytest_examples/test_a.py": {
+            "parent_ids": [],
             "nodeid": "pytest_examples/test_a.py",
-            "parent_nodeids": [],
+            "short_id": "pytest_examples/test_a.py",
             "status": "running",
             "child_leaves": {
-              "pytest_examples/test_a.py::test_one": {
+              "test_one": {
+                "short_id": "test_one",
                 "nodeid": "pytest_examples/test_a.py::test_one",
-                "parent_nodeids": [
+                "longrepr": null,
+                "parent_ids": [
                   "pytest_examples/test_a.py"
                 ],
-                "status": "running",
-                "longrepr": null
+                "status": "running"
               }
             }
           }
         }
       }
     ],
-    "name": "update",
     "namespace": "/"
   },
   {
+    "name": "update",
     "args": [
       {
+        "parent_ids": [],
         "nodeid": "",
-        "parent_nodeids": [],
+        "short_id": "",
         "status": "passed",
         "child_branches": {
           "pytest_examples/test_a.py": {
+            "parent_ids": [],
             "nodeid": "pytest_examples/test_a.py",
-            "parent_nodeids": [],
+            "short_id": "pytest_examples/test_a.py",
             "status": "passed",
             "child_leaves": {
-              "pytest_examples/test_a.py::test_one": {
+              "test_one": {
+                "short_id": "test_one",
                 "nodeid": "pytest_examples/test_a.py::test_one",
-                "parent_nodeids": [
+                "longrepr": null,
+                "parent_ids": [
                   "pytest_examples/test_a.py"
                 ],
-                "status": "passed",
-                "longrepr": null
+                "status": "passed"
               }
             }
           }
         }
       }
     ],
-    "name": "update",
     "namespace": "/"
   }
 ]

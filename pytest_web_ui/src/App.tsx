@@ -97,14 +97,15 @@ class TestRunner extends React.Component<TestRunnerProps, TestRunnerState> {
 
   /**
    * Run a test after its run button has been clicked.
-   * @param nodeid ID of node to run
+   * @param short_id ID of node to run
    */
-  handleTestRun(nodeid: string) {
+  handleTestRun(short_id: string) {
     if (!this.state.socket) {
       console.log("Socket connection not yet established");
       return;
     }
-    this.state.socket.emit("run test", nodeid);
+    const nodeid =
+      this.state.socket.emit("run test", short_id);
   }
 
   /**
@@ -130,7 +131,7 @@ class TestRunner extends React.Component<TestRunnerProps, TestRunnerState> {
 
 /**
  * Parse the current URL path (excluding query parameters) and return the
- * nodeids of the currently selected branches.
+ * short_ids of the currently selected branches.
  * @param url URL path string
  */
 const parseSelection = (url: string): Array<string> => {
@@ -159,7 +160,7 @@ const updateResultTree = (
 interface TestRunnerDisplayProps {
   selectedBranch: BranchNode | null,
   selection: Array<string>,
-  handleTestRun: (nodeid: string) => void,
+  handleTestRun: (short_id: string) => void,
 }
 
 /**

@@ -52,13 +52,18 @@ class Node(abc.ABC):
     """Define common interface for branch and leaf nodes."""
 
     def __init__(self):
-        self.parent_nodeids: List[str] = []
+        self.parent_ids: List[str] = []
 
     @property
     @abc.abstractmethod
     def nodeid(self) -> str:
         """Return the unique ID for this node."""
         raise NotImplementedError
+
+    @property
+    def short_id(self) -> str:
+        """Short ID."""
+        return self.nodeid.split("::")[-1]
 
     @property
     def status(self) -> TestState:
@@ -102,7 +107,7 @@ class BranchNode(Node):
         self._pytest_node = collector
         self.child_branches: Dict[str, BranchNode] = {}
         self.child_leaves: Dict[str, LeafNode] = {}
-        self.parent_nodeids: List[str] = []
+        self.parent_ids: List[str] = []
 
     def __eq__(self, other: object) -> bool:
         """Compare two BranchNodes for equality."""
@@ -154,7 +159,7 @@ class LeafNode(Node):
         self._pytest_node = item
         self.report = None
         self._status = TestState.INIT
-        self.parent_nodeids: List[str] = []
+        self.parent_ids: List[str] = []
 
     def __eq__(self, other: object) -> bool:
         """Compare two LeafNodes for equality."""
@@ -213,13 +218,13 @@ def build_from_session(session: nodes.Session,) -> Tuple[BranchNode, Dict[str, N
         collectors = item.listchain()[1:-1]
         branch = _ensure_branch(root, collectors, nodes_index)
         leaf = LeafNode(item)
-        branch.child_leaves[leaf.nodeid] = leaf
+        branch.child_leaves[leaf.short_id] = leaf
         nodes_index[item.nodeid] = leaf
 
     _remove_singletons(root)
 
     for branch in root.child_branches.values():
-        _set_parent_nodeids(branch)
+        _set_parent_ids(branch)
 
     return root, nodes_index
 
@@ -236,14 +241,14 @@ def _remove_singletons(root: BranchNode):
         children = list(node.iter_children())
         assert len(children) != 0
         if len(children) != 1:
-            new_child_branches[node.nodeid] = node
+            new_child_branches[node.short_id] = node
             continue
 
         child = children[0]
         if isinstance(child, BranchNode):
-            new_child_branches[child.nodeid] = child
+            new_child_branches[child.short_id] = child
         elif isinstance(child, LeafNode):
-            root.child_leaves[child.nodeid] = child
+            root.child_leaves[child.short_id] = child
 
     root.child_branches = new_child_branches
 
@@ -261,36 +266,38 @@ def _ensure_branch(
         return node
 
     next_col, rest = collectors[0], collectors[1:]
+    short_id = next_col.nodeid.split("::")[-1]
 
     try:
-        child = node.child_branches[next_col.nodeid]
+        child = node.child_branches[short_id]
     except KeyError:
         child = BranchNode(collector=next_col)
         nodes_index[child.nodeid] = child
-        node.child_branches[next_col.nodeid] = child
+        node.child_branches[short_id] = child
 
     return _ensure_branch(child, rest, nodes_index)
 
 
-def _set_parent_nodeids(node: BranchNode):
+def _set_parent_ids(node: BranchNode):
     """
-    Recursively set the parent_nodeids attribute on this node and all of its
+    Recursively set the parent_ids attribute on this node and all of its
     children, based on the current tree structure.
     """
     for child_branch in node.child_branches.values():
-        child_branch.parent_nodeids = node.parent_nodeids + [node.nodeid]
-        _set_parent_nodeids(child_branch)
+        child_branch.parent_ids = node.parent_ids + [node.short_id]
+        _set_parent_ids(child_branch)
 
     for child_leaf in node.child_leaves.values():
-        child_leaf.parent_nodeids = node.parent_nodeids + [node.nodeid]
+        child_leaf.parent_ids = node.parent_ids + [node.short_id]
 
 
 class NodeSchema(marshmallow.Schema):
     """Base schema for all nodes."""
 
     nodeid = fields.Str()
+    short_id = fields.Str()
     status = marshmallow_enum.EnumField(TestState, by_value=True)
-    parent_nodeids = fields.List(fields.Str())
+    parent_ids = fields.List(fields.Str())
 
 
 class LeafNodeSchema(NodeSchema):
@@ -317,7 +324,7 @@ def serialize_parents_slice(
     curr_serialized_node = serialized_root
     curr_node = result_tree
 
-    for uid in result_node.parent_nodeids:
+    for uid in result_node.parent_ids:
         curr_node = curr_node.child_branches[uid]
         serialized_child = shallow_branch_schema._serialize(curr_node)
         curr_serialized_node["child_branches"] = {uid: serialized_child}

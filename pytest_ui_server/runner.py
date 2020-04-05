@@ -57,10 +57,10 @@ class PyTestRunner:
 
         if isinstance(updated_node, result_tree.BranchNode):
             serialized_result = self._branch_schema.dump(updated_node)
-            parent_node["child_branches"] = {updated_node.nodeid: serialized_result}
+            parent_node["child_branches"] = {updated_node.short_id: serialized_result}
         elif isinstance(updated_node, result_tree.LeafNode):
             serialized_result = self._leaf_schema.dump(updated_node)
-            parent_node["child_leaves"] = {updated_node.nodeid: serialized_result}
+            parent_node["child_leaves"] = {updated_node.short_id: serialized_result}
         else:
             raise TypeError(f"Unexpected node type: {type(updated_node)}")
 

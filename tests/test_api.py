@@ -31,7 +31,7 @@ def test_report_skeleton(clients):
 
     # Uncomment to update the serialization snapshot.
     # with open(json_filepath, "w") as f:
-    #    json.dump(rsp_json, f, indent=2)
+    #     json.dump(rsp_json, f, indent=2)
 
     with open(json_filepath) as f:
         expected_serialization = json.load(f)
@@ -39,73 +39,18 @@ def test_report_skeleton(clients):
     assert rsp_json == expected_serialization
 
 
-_EXPECTED_RCVD = [
-    {
-        "args": [
-            {
-                "nodeid": "",
-                "parent_nodeids": [],
-                "status": "running",
-                "child_branches": {
-                    "pytest_examples/test_a.py": {
-                        "nodeid": "pytest_examples/test_a.py",
-                        "parent_nodeids": [],
-                        "status": "running",
-                        "child_leaves": {
-                            "pytest_examples/test_a.py::test_one": {
-                                "nodeid": "pytest_examples/test_a.py::test_one",
-                                "parent_nodeids": ["pytest_examples/test_a.py"],
-                                "status": "running",
-                                "longrepr": None,
-                            }
-                        },
-                    }
-                },
-            }
-        ],
-        "name": "update",
-        "namespace": "/",
-    },
-    {
-        "args": [
-            {
-                "nodeid": "",
-                "parent_nodeids": [],
-                "status": "passed",
-                "child_branches": {
-                    "pytest_examples/test_a.py": {
-                        "nodeid": "pytest_examples/test_a.py",
-                        "parent_nodeids": [],
-                        "status": "passed",
-                        "child_leaves": {
-                            "pytest_examples/test_a.py::test_one": {
-                                "nodeid": "pytest_examples/test_a.py::test_one",
-                                "parent_nodeids": ["pytest_examples/test_a.py"],
-                                "status": "passed",
-                                "longrepr": None,
-                            }
-                        },
-                    }
-                },
-            }
-        ],
-        "name": "update",
-        "namespace": "/",
-    },
-]
-
-
 def test_run_test(clients):
     flask_client, socket_client = clients
     socket_client.emit("run test", "pytest_examples/test_a.py::test_one")
     rcvd = socket_client.get_received()
     assert len(rcvd) == 2
-    assert rcvd == _EXPECTED_RCVD
     json_filepath = os.path.join(
         os.path.dirname(__file__), os.pardir, "test_data", "test_run_update.json"
     )
-    with open(json_filepath, "w") as f:
-        json.dump(_EXPECTED_RCVD, f, indent=2)
+
+    # Uncomment to update expected JSON.
+    # with open(json_filepath, "w") as f:
+    #     json.dump(rcvd, f, indent=2)
 
     with open(json_filepath) as f:
         expected_rcvd = json.load(f)
