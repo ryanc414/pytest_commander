@@ -22,7 +22,6 @@ const App = () => {
       <Route path="/"
         render={
           ({ location }) => {
-            console.log(location);
             return <TestRunner url={location.pathname} />;
           }
         }

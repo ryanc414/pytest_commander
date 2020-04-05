@@ -71,7 +71,7 @@ def build_app(directory: str) -> Tuple[flask.Flask, flask_socketio.SocketIO]:
 
     def _serialize_parents_slice(
         result_node: result_tree.Node,
-    ) -> Tuple[Dict[str, any], Dict[str, any]]:
+    ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """Serialize a slice of the tree from root to the given result node."""
         serialized_root = shallow_branch_schema._serialize(test_runner.result_tree)
         curr_serialized_node = serialized_root
