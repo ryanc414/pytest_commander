@@ -99,13 +99,12 @@ class TestRunner extends React.Component<TestRunnerProps, TestRunnerState> {
    * Run a test after its run button has been clicked.
    * @param short_id ID of node to run
    */
-  handleTestRun(short_id: string) {
+  handleTestRun(nodeid: string) {
     if (!this.state.socket) {
       console.log("Socket connection not yet established");
       return;
     }
-    const nodeid =
-      this.state.socket.emit("run test", short_id);
+    this.state.socket.emit("run test", nodeid);
   }
 
   /**
@@ -146,7 +145,6 @@ const parseSelection = (url: string): Array<string> => {
 /**
  * Update a particular node in the result tree with new data.
  * @param currNode Existing in result tree to update
- * @param parentNodeIds List of parent node IDs to reach node to update
  * @param updateData Update data for new node
  */
 const updateResultTree = (

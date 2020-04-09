@@ -30,8 +30,6 @@ export const InfoPane = (props: InfoPaneProps) => {
     return <div>Please select a test.</div>
   }
 
-  console.log(props.selectedLeaf.longrepr);
-
   return (
     <>
       <div>
@@ -100,8 +98,8 @@ export const NavBreadcrumbs = (props: NavBreadcrumbsProps) => {
       </BreadcrumbItem>
       {
         restSelected.map(
-          (nodeid: string, index: number) => (
-            <BreadcrumbItem key={nodeid}>
+          (short_id: string, index: number) => (
+            <BreadcrumbItem key={short_id}>
               <Link
                 to={
                   "/" +
@@ -111,7 +109,7 @@ export const NavBreadcrumbs = (props: NavBreadcrumbsProps) => {
                     .join("/")
                 }
               >
-                {nodeid}
+                {short_id}
               </Link>
             </BreadcrumbItem>
           )

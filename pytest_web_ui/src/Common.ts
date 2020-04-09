@@ -16,15 +16,17 @@ export const COLWIDTH = "25em";
 
 export interface BranchNode {
   short_id: string,
+  nodeid: string,
   status: string,
-  parent_nodeids: Array<string>,
+  parent_ids: Array<string>,
   child_branches: { [key: string]: BranchNode },
   child_leaves: { [key: string]: LeafNode },
 }
 
 export interface LeafNode {
   short_id: string,
+  nodeid: string,
   status: string,
-  parent_nodeids: Array<string>,
+  parent_ids: Array<string>,
   longrepr: string,
 }

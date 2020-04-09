@@ -57,42 +57,44 @@ interface NavBranchEntriesProps {
  * @param props Render props
  */
 const NavBranchEntries = (props: NavBranchEntriesProps) => {
-  const childBranches = Object.keys(props.selectedBranch.child_branches);
+  const childBranchIDs = Object.keys(props.selectedBranch.child_branches);
   return (
     <>
       {
-        childBranches.map(
-          (nodeid: string) => (
-            <ListGroupItem
-              key={nodeid}
-              className={
-                css(
-                  getNavEntryStyle(
-                    props.selectedBranch.child_branches[nodeid].status
-                  ),
-                  styles.navEntryCommon,
-                )
-              }
-            >
-              <span className={css(styles.navLabel)}>
-                <Link
-                  to={
-                    props.selection
-                      .concat([nodeid])
-                      .map(encodeURIComponent)
-                      .join("/")
-                  }
-                >
-                  {nodeid}
-                </Link>
-              </span>
-              <NavEntryIcon
-                nodeid={nodeid}
-                status={props.selectedBranch.child_branches[nodeid].status}
-                handleTestRun={props.handleTestRun}
-              />
-            </ListGroupItem>
-          )
+        childBranchIDs.map(
+          (short_id: string) => {
+            const childNode = props.selectedBranch.child_branches[short_id];
+
+            return (
+              <ListGroupItem
+                key={short_id}
+                className={
+                  css(
+                    getNavEntryStyle(childNode.status),
+                    styles.navEntryCommon,
+                  )
+                }
+              >
+                <span className={css(styles.navLabel)}>
+                  <Link
+                    to={
+                      props.selection
+                        .concat([short_id])
+                        .map(encodeURIComponent)
+                        .join("/")
+                    }
+                  >
+                    {short_id}
+                  </Link>
+                </span>
+                <NavEntryIcon
+                  nodeid={childNode.nodeid}
+                  status={childNode.status}
+                  handleTestRun={props.handleTestRun}
+                />
+              </ListGroupItem>
+            );
+          }
         )
       }
     </>
@@ -111,30 +113,31 @@ interface NavLeafEntriesProps {
  * @param props Render props
  */
 const NavLeafEntries = (props: NavLeafEntriesProps) => {
-  const childLeaves = Object.keys(props.selectedBranch.child_leaves);
+  const childLeafIDs = Object.keys(props.selectedBranch.child_leaves);
 
   return (
     <>
       {
-        childLeaves.map(
-          (nodeid: string) => {
-            const label = (nodeid === props.selectedLeafID) ?
-              nodeid :
+        childLeafIDs.map(
+          (short_id: string) => {
+            const label = (short_id === props.selectedLeafID) ?
+              short_id :
               (
                 <Link
-                  to={`?selectedLeaf=${encodeURIComponent(nodeid)}`}
+                  to={`?selectedLeaf=${encodeURIComponent(short_id)}`}
                 >
-                  {nodeid}
+                  {short_id}
                 </Link>
               );
+            const childLeaf = props.selectedBranch.child_leaves[short_id];
 
             return (
               <ListGroupItem
-                key={nodeid}
+                key={short_id}
                 className={
                   css(
                     getNavEntryStyle(
-                      props.selectedBranch.child_leaves[nodeid].status
+                      props.selectedBranch.child_leaves[short_id].status
                     ),
                     styles.navEntryCommon,
                   )
@@ -142,8 +145,8 @@ const NavLeafEntries = (props: NavLeafEntriesProps) => {
               >
                 <span className={css(styles.navLabel)}>{label}</span>
                 <NavEntryIcon
-                  nodeid={nodeid}
-                  status={props.selectedBranch.child_leaves[nodeid].status}
+                  nodeid={childLeaf.nodeid}
+                  status={childLeaf.status}
                   handleTestRun={props.handleTestRun}
                 />
               </ListGroupItem>
