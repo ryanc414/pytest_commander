@@ -6,7 +6,7 @@ def main():
         long_description = f.read()
 
     setuptools.setup(
-        name="pytest_ui_server",
+        name="pytest_web_ui",
         version="0.0.1",
         author="Ryan Collingham",
         author_email="ryanc118@gmail.com",
@@ -21,6 +21,8 @@ def main():
             "Operating System :: OS Independent",
         ],
         python_requires=">=3.6",
+        include_package_data=True,
+        entry_points={"console_scripts": ["pytest_web_ui = pytest_ui_server"]},
     )
 
 

@@ -1,0 +1,1 @@
+recursive-include pytest_web_ui/build *

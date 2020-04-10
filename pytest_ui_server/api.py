@@ -5,6 +5,7 @@ from typing import Dict, Any, Tuple
 
 import flask
 import flask_socketio  # type: ignore
+import pkg_resources
 
 from pytest_ui_server import runner
 from pytest_ui_server import result_tree
@@ -14,9 +15,7 @@ LOGGER = logging.getLogger(__name__)
 
 def build_app(directory: str) -> Tuple[flask.Flask, flask_socketio.SocketIO]:
     """Build a Flask app to serve the API and static files."""
-    build_dir = os.path.join(
-        os.path.dirname(__file__), os.pardir, "pytest_web_ui", "build"
-    )
+    build_dir = pkg_resources.resource_filename(__name__, "pytest_web_ui/build")
     static_dir = os.path.join(build_dir, "static")
     index_file = os.path.join(build_dir, "index.html")
 
