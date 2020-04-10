@@ -24,7 +24,7 @@ interface NavColumnProps {
  */
 export const NavColumn = (props: NavColumnProps) => {
   if (!props.selectedBranch) {
-    return <span>Loading...</span>;
+    return <div className={css(styles.navColumn)} />;
   }
 
   return (

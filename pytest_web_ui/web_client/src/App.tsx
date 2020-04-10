@@ -112,11 +112,19 @@ class TestRunner extends React.Component<TestRunnerProps, TestRunnerState> {
    * store and hands off rendering logic to a separate stateless component.
    */
   render() {
+    if (this.state.loading) {
+      return <MessageDisplay message="Loading..." />;
+    }
+
     const selection = parseSelection(this.props.url);
     const selectedBranch = getSelectedBranch(
       selection,
       this.state.resultTree,
     );
+
+    if (!selectedBranch) {
+      return <MessageDisplay message="404 not found" />;
+    }
 
     return (
       <TestRunnerDisplay
@@ -188,6 +196,28 @@ const TestRunnerDisplay = (props: TestRunnerDisplayProps) => {
   );
 };
 
+interface MessageDisplayProps {
+  message: string,
+}
+
+/**
+ * Display a message.
+ */
+const MessageDisplay = (props: MessageDisplayProps) => (
+  <div>
+    <NavColumn
+      selectedBranch={null}
+      selectedLeafID={null}
+      selection={[]}
+      handleTestRun={(nodeid: string) => undefined}
+    />
+    <div className={css(styles.centrePane)}>
+      <NavBreadcrumbs selection={[]} />
+      <div className={css(styles.loadingMessage)}>{props.message}</div>
+    </div>
+  </div>
+);
+
 /**
  * Modified react hook to parse the current query parameters in the URL. These
  * are expected in the form "?x=y".
@@ -225,6 +255,9 @@ const styles = StyleSheet.create({
     "margin-left": COLWIDTH,
     padding: "10px 10px",
   },
+  loadingMessage: {
+    "text-align": "center",
+  }
 });
 
 export default App;
