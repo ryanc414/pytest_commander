@@ -112,18 +112,18 @@ class TestRunner extends React.Component<TestRunnerProps, TestRunnerState> {
    * store and hands off rendering logic to a separate stateless component.
    */
   render() {
+    const selection = parseSelection(this.props.url);
     if (this.state.loading) {
-      return <MessageDisplay message="Loading..." />;
+      return <MessageDisplay message="Loading..." selection={selection} />;
     }
 
-    const selection = parseSelection(this.props.url);
     const selectedBranch = getSelectedBranch(
       selection,
       this.state.resultTree,
     );
 
     if (!selectedBranch) {
-      return <MessageDisplay message="404 not found" />;
+      return <MessageDisplay message="404 not found" selection={selection} />;
     }
 
     return (
@@ -198,6 +198,7 @@ const TestRunnerDisplay = (props: TestRunnerDisplayProps) => {
 
 interface MessageDisplayProps {
   message: string,
+  selection: Array<string>,
 }
 
 /**
@@ -212,8 +213,8 @@ const MessageDisplay = (props: MessageDisplayProps) => (
       handleTestRun={(nodeid: string) => undefined}
     />
     <div className={css(styles.centrePane)}>
-      <NavBreadcrumbs selection={[]} />
-      <div className={css(styles.loadingMessage)}>{props.message}</div>
+      <NavBreadcrumbs selection={props.selection} />
+      <div>{props.message}</div>
     </div>
   </div>
 );
@@ -255,9 +256,6 @@ const styles = StyleSheet.create({
     "margin-left": COLWIDTH,
     padding: "10px 10px",
   },
-  loadingMessage: {
-    "text-align": "center",
-  }
 });
 
 export default App;

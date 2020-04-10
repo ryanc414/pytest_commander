@@ -135,5 +135,5 @@ const styles = StyleSheet.create({
   },
   longrepr: {
     "padding": "10px",
-  }
+  },
 });
