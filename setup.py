@@ -2,13 +2,24 @@ import setuptools
 
 
 def main():
+    with open("README.md") as f:
+        long_description = f.read()
+
     setuptools.setup(
         name="pytest_ui_server",
         version="0.0.1",
         author="Ryan Collingham",
         author_email="ryanc118@gmail.com",
         description="An interactive web UI test runner for PyTest",
+        long_description=long_description,
+        long_description_content_type="test/markdown",
+        url="https://github.com/ryanc414/pytest_web_ui",
         packages=setuptools.find_packages(),
+        classifiers=[
+            "Programming Language :: Python :: 3",
+            "License :: OSI Approved :: MIT License",
+            "Operating System :: OS Independent",
+        ],
         python_requires=">=3.6",
     )
 
