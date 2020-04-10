@@ -4,7 +4,7 @@ import logging
 import os
 import sys
 
-from pytest_ui_server import api
+from pytest_web_ui import api
 
 LOGGER = logging.getLogger(__name__)
 

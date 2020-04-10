@@ -47,7 +47,7 @@ Finally, start the pytest web UI server process and navigate your browser
 to http://localhost:5000
 
 ```
-pipenv run python -m pytest_ui_server /path/to/your/tests
+pipenv run python -m pytest_web_ui /path/to/your/tests
 ```
 
 Happy testing!

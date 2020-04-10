@@ -5,8 +5,8 @@ from unittest import mock
 
 import pytest
 
-from pytest_ui_server import runner
-from pytest_ui_server import result_tree
+from pytest_web_ui import runner
+from pytest_web_ui import result_tree
 
 
 @pytest.fixture

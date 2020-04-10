@@ -7,7 +7,7 @@ import flask_socketio  # type: ignore
 import pytest  # type: ignore
 from _pytest import reports  # type: ignore
 
-from pytest_ui_server import result_tree
+from pytest_web_ui import result_tree
 
 LOGGER = logging.getLogger(__name__)
 

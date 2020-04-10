@@ -31,7 +31,9 @@ def main():
             "eventlet",
         ],
         include_package_data=True,
-        entry_points={"console_scripts": ["pytest_web_ui = pytest_ui_server"]},
+        entry_points={
+            "console_scripts": ["pytest_web_ui = pytest_web_ui.__main__:main"]
+        },
     )
 
 

@@ -1,1 +1,1 @@
-recursive-include pytest_web_ui/build *
+recursive-include pytest_web_ui/web_client/build *
