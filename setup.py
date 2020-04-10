@@ -1,3 +1,4 @@
+"""Setup script for PyTest web UI."""
 import setuptools
 
 
@@ -21,6 +22,14 @@ def main():
             "Operating System :: OS Independent",
         ],
         python_requires=">=3.6",
+        install_requires=[
+            "pytest",
+            "marshmallow",
+            "marshmallow-enum",
+            "flask",
+            "flask-socketio",
+            "eventlet",
+        ],
         include_package_data=True,
         entry_points={"console_scripts": ["pytest_web_ui = pytest_ui_server"]},
     )
