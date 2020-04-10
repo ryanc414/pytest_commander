@@ -140,6 +140,11 @@ class BranchNode(Node):
         """Unique ID of this node, used for indexing."""
         return self._pytest_node.nodeid
 
+    @property
+    def fspath(self):
+        """Filesystem path this test node corresponds to."""
+        return self._pytest_node.fspath
+
     def _get_status(self) -> TestState:
         """Return status of child entries."""
         return _status_precedent(child.status for child in self.iter_children())

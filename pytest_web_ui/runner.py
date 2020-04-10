@@ -40,7 +40,7 @@ class PyTestRunner:
         Runs a test or tests at the given nodeid, update our report tree
         and notify the update over the websocket.
         """
-        full_path = nodeid.replace("/", os.sep)
+        full_path = str(self.result_tree.fspath / nodeid.replace("/", os.sep))
         pytest.main([full_path], plugins=[TestRunPlugin(self._add_test_report)])
         self._send_update(self._result_index[nodeid])
 
