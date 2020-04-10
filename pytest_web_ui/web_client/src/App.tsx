@@ -11,7 +11,7 @@ import _ from "lodash";
 
 import { COLWIDTH, BranchNode } from "./Common";
 import { NavColumn } from "./NavColumn";
-import { NavBreadcrumbs, InfoPane } from "./CentrePane";
+import { NavBreadcrumbs, InfoPane, Message } from "./CentrePane";
 
 /**
  * Top level App component.
@@ -123,7 +123,7 @@ class TestRunner extends React.Component<TestRunnerProps, TestRunnerState> {
     );
 
     if (!selectedBranch) {
-      return <MessageDisplay message="404 not found" selection={selection} />;
+      return <MessageDisplay message="404 Page Not Found" selection={selection} />;
     }
 
     return (
@@ -214,7 +214,7 @@ const MessageDisplay = (props: MessageDisplayProps) => (
     />
     <div className={css(styles.centrePane)}>
       <NavBreadcrumbs selection={props.selection} />
-      <div>{props.message}</div>
+      <Message message={props.message} />
     </div>
   </div>
 );

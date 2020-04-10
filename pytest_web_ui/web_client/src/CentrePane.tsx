@@ -13,7 +13,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { Link } from "react-router-dom";
 
-import { LeafNode } from "./Common";
+import { LeafNode, MEDIUM_GREY } from "./Common";
 import { css, StyleSheet } from 'aphrodite';
 
 interface InfoPaneProps {
@@ -27,7 +27,7 @@ interface InfoPaneProps {
  */
 export const InfoPane = (props: InfoPaneProps) => {
   if (!props.selectedLeaf) {
-    return <div>Please select a test.</div>
+    return <Message message="Please select a test." />;
   }
 
   return (
@@ -42,6 +42,12 @@ export const InfoPane = (props: InfoPaneProps) => {
     </>
   )
 }
+
+interface MessageProps { message: string }
+
+export const Message = (props: MessageProps) => (
+  <h1 className={css(styles.message)}>{props.message}</h1>
+);
 
 /**
  * Return an icon for the given test node status.
@@ -136,4 +142,13 @@ const styles = StyleSheet.create({
   longrepr: {
     "padding": "10px",
   },
+  message: {
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    textAlign: 'center',
+    minHeight: '100vh',
+    color: MEDIUM_GREY,
+  }
 });
