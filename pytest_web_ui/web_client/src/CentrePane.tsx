@@ -148,7 +148,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     textAlign: 'center',
-    minHeight: '100vh',
+    minHeight: '80vh',
     color: MEDIUM_GREY,
   }
 });
