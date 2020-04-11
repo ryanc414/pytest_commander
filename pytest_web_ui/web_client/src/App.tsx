@@ -38,6 +38,7 @@ interface TestRunnerState {
   resultTree: BranchNode | null,
   loading: boolean,
   socket: SocketIOClient.Socket | null,
+  errorMessage: string | null,
 }
 
 class TestRunner extends React.Component<TestRunnerProps, TestRunnerState> {
@@ -47,6 +48,7 @@ class TestRunner extends React.Component<TestRunnerProps, TestRunnerState> {
       resultTree: null,
       loading: false,
       socket: null,
+      errorMessage: null,
     }
     this.handleUpdate = this.handleUpdate.bind(this);
     this.handleTestRun = this.handleTestRun.bind(this);
@@ -57,7 +59,6 @@ class TestRunner extends React.Component<TestRunnerProps, TestRunnerState> {
    * make an API call to get the result tree.
    */
   componentDidMount() {
-    console.log("INIT WEBSOCKET");
     const socket = io();
     this.setState({ loading: true, socket: socket }, () => {
       socket.on('update', this.handleUpdate);
@@ -73,6 +74,8 @@ class TestRunner extends React.Component<TestRunnerProps, TestRunnerState> {
   getResultTree() {
     axios.get("/api/v1/result-tree").then(response => {
       this.setState({ resultTree: response.data, loading: false });
+    }).catch((reason: any) => {
+      this.setState({ loading: false, errorMessage: String(reason) });
     });
   }
 
@@ -113,8 +116,18 @@ class TestRunner extends React.Component<TestRunnerProps, TestRunnerState> {
    */
   render() {
     const selection = parseSelection(this.props.url);
+
     if (this.state.loading) {
       return <MessageDisplay message="Loading..." selection={selection} />;
+    }
+
+    if (this.state.errorMessage) {
+      return (
+        <MessageDisplay
+          message={this.state.errorMessage}
+          selection={selection}
+        />
+      );
     }
 
     const selectedBranch = getSelectedBranch(
