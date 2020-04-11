@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
   runButton: {
     cursor: 'pointer',
     color: 'black',
-    transition: 'all 0.3s ease-out 0s',
+    transition: 'color 0.3s ease-out 0s',
     ':hover': {
       color: LIGHT_GREY
     }
