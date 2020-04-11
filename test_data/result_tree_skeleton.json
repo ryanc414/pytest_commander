@@ -8,28 +8,17 @@
             "test_alpha": {
               "longrepr": null,
               "nodeid": "pytest_examples/test_a.py::TestSuite::test_alpha",
-              "parent_ids": [
-                "pytest_examples/test_a.py",
-                "TestSuite"
-              ],
               "short_id": "test_alpha",
               "status": "init"
             },
             "test_beta": {
               "longrepr": null,
               "nodeid": "pytest_examples/test_a.py::TestSuite::test_beta",
-              "parent_ids": [
-                "pytest_examples/test_a.py",
-                "TestSuite"
-              ],
               "short_id": "test_beta",
               "status": "init"
             }
           },
           "nodeid": "pytest_examples/test_a.py::TestSuite",
-          "parent_ids": [
-            "pytest_examples/test_a.py"
-          ],
           "short_id": "TestSuite",
           "status": "init"
         }
@@ -38,24 +27,17 @@
         "test_one": {
           "longrepr": null,
           "nodeid": "pytest_examples/test_a.py::test_one",
-          "parent_ids": [
-            "pytest_examples/test_a.py"
-          ],
           "short_id": "test_one",
           "status": "init"
         },
         "test_two": {
           "longrepr": null,
           "nodeid": "pytest_examples/test_a.py::test_two",
-          "parent_ids": [
-            "pytest_examples/test_a.py"
-          ],
           "short_id": "test_two",
           "status": "init"
         }
       },
       "nodeid": "pytest_examples/test_a.py",
-      "parent_ids": [],
       "short_id": "pytest_examples/test_a.py",
       "status": "init"
     },
@@ -65,31 +47,23 @@
         "test_one": {
           "longrepr": null,
           "nodeid": "pytest_examples/test_b.py::test_one",
-          "parent_ids": [
-            "pytest_examples/test_b.py"
-          ],
           "short_id": "test_one",
           "status": "init"
         },
         "test_two": {
           "longrepr": null,
           "nodeid": "pytest_examples/test_b.py::test_two",
-          "parent_ids": [
-            "pytest_examples/test_b.py"
-          ],
           "short_id": "test_two",
           "status": "init"
         }
       },
       "nodeid": "pytest_examples/test_b.py",
-      "parent_ids": [],
       "short_id": "pytest_examples/test_b.py",
       "status": "init"
     }
   },
   "child_leaves": {},
   "nodeid": "",
-  "parent_ids": [],
   "short_id": "",
   "status": "init"
 }

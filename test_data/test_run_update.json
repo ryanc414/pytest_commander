@@ -3,25 +3,20 @@
     "name": "update",
     "args": [
       {
-        "parent_ids": [],
-        "nodeid": "",
-        "short_id": "",
         "status": "running",
+        "short_id": "",
+        "nodeid": "",
         "child_branches": {
           "pytest_examples/test_a.py": {
-            "parent_ids": [],
-            "nodeid": "pytest_examples/test_a.py",
-            "short_id": "pytest_examples/test_a.py",
             "status": "running",
+            "short_id": "pytest_examples/test_a.py",
+            "nodeid": "pytest_examples/test_a.py",
             "child_leaves": {
               "test_one": {
-                "short_id": "test_one",
-                "nodeid": "pytest_examples/test_a.py::test_one",
                 "longrepr": null,
-                "parent_ids": [
-                  "pytest_examples/test_a.py"
-                ],
-                "status": "running"
+                "status": "running",
+                "short_id": "test_one",
+                "nodeid": "pytest_examples/test_a.py::test_one"
               }
             }
           }
@@ -34,25 +29,20 @@
     "name": "update",
     "args": [
       {
-        "parent_ids": [],
-        "nodeid": "",
-        "short_id": "",
         "status": "passed",
+        "short_id": "",
+        "nodeid": "",
         "child_branches": {
           "pytest_examples/test_a.py": {
-            "parent_ids": [],
-            "nodeid": "pytest_examples/test_a.py",
-            "short_id": "pytest_examples/test_a.py",
             "status": "passed",
+            "short_id": "pytest_examples/test_a.py",
+            "nodeid": "pytest_examples/test_a.py",
             "child_leaves": {
               "test_one": {
-                "short_id": "test_one",
-                "nodeid": "pytest_examples/test_a.py::test_one",
                 "longrepr": null,
-                "parent_ids": [
-                  "pytest_examples/test_a.py"
-                ],
-                "status": "passed"
+                "status": "passed",
+                "short_id": "test_one",
+                "nodeid": "pytest_examples/test_a.py::test_one"
               }
             }
           }

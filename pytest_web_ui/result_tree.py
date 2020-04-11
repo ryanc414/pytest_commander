@@ -302,7 +302,6 @@ class NodeSchema(marshmallow.Schema):
     nodeid = fields.Str()
     short_id = fields.Str()
     status = marshmallow_enum.EnumField(TestState, by_value=True)
-    parent_ids = fields.List(fields.Str())
 
 
 class LeafNodeSchema(NodeSchema):
