@@ -40,7 +40,7 @@ def test_report_skeleton(clients):
 
 
 def test_run_test(clients):
-    flask_client, socket_client = clients
+    _, socket_client = clients
     socket_client.emit("run test", "pytest_examples/test_a.py::test_one")
     rcvd = socket_client.get_received()
     assert len(rcvd) == 2
