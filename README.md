@@ -7,6 +7,8 @@ A web app for controlling PyTest interactively. With it, you can explore your
 test hierarchy (test packages/modules/classes/methods etc.), run tests at the
 click of a button and see the results presented in your web browser.
 
+![Screenshot](https://raw.githubusercontent.com/ryanc414/pytest_web_ui/master/img/screenshot1.png)
+
 Features
 ========
 
