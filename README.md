@@ -37,6 +37,10 @@ I recommend installing into an activated
 want to make sure that all additional dependencies required to run your tests
 are installed into the same virtual environment.
 
+When you run with default options, the web app to browse and run tests should be
+opened automatically in your default browser. To view full docs for the 
+command-line parameters, run `pytest_web_ui --help`.
+
 Build from source
 =================
 
@@ -51,11 +55,11 @@ python build.py
 python test.py
 ```
 
-You may then install the local directory into an activated virual environment:
+You may then install the local directory into an activated virual environment,
+along with other dependencies installed to run your tests:
 
 ```
 pip install .
-# Now install other dependencies needed to run your tests.
 pytest_web_ui /path/to/your/tests
 ```
 
