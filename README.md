@@ -33,7 +33,9 @@ pytest_web_ui /path/to/your/tests
 ```
 
 I recommend installing into an activated
-[virtual environment](https://docs.python.org/3/tutorial/venv.html).
+[virtual environment](https://docs.python.org/3/tutorial/venv.html). You will
+want to make sure that all additional dependencies required to run your tests
+are installed into the same virtual environment.
 
 Build from source
 =================
