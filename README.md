@@ -15,39 +15,46 @@ Features
   instead of having to scroll up through many screens of terminal output.
 - Test files and dependencies are reloaded every time so you can run, tweak your
   code, then run again in a fast iteration cycle.
+- Runs on any modern OS (tested on Win10, macOS and Ubuntu)
 
-How to use
+Prerequisites
+=============
+
+- Requires Python3.6+ and pip.
+
+Quickstart
 ==========
 
-Currently, you must install from source. Start by cloning this repo:
+Install and get started running your own PyTest tests:
+
+```
+pip install pytest_web_ui
+pytest_web_ui /path/to/your/tests
+```
+
+I recommend installing into an activated
+[virtual environment](https://docs.python.org/3/tutorial/venv.html).
+
+Build from source
+=================
+
+Alternatively you may build from source. In addition to the prerequisites above,
+you must ensure you have installed [pipenv](https://pipenv.pypa.io/en/latest/)
+and [npm](https://www.npmjs.com/get-npm).
 
 ```
 git clone https://github.com/ryanc414/pytest_web_ui.git
+cd pytest_web_ui
+python build.py
+python test.py
 ```
 
-Secondly, you must compile the typescript code so that it can run in your
-browser:
+You may then install the local directory into an activated virual environment:
 
 ```
-cd pytest_web_ui/pytest_web_ui
-npm install
-npm run build
-```
-
-Next, ensure all python dependencies are installed using
-[pipenv](https://pipenv.pypa.io/en/latest/):
-
-```
-cd ..
-pipenv install
-# Install any additional dependencies required to run your tests.
-```
-
-Finally, start the pytest web UI server process and navigate your browser
-to http://localhost:5000
-
-```
-pipenv run python -m pytest_web_ui /path/to/your/tests
+pip install .
+# Now install other dependencies needed to run your tests.
+pytest_web_ui /path/to/your/tests
 ```
 
 Happy testing!
