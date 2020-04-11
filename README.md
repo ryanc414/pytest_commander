@@ -28,7 +28,7 @@ Quickstart
 Install and get started running your own PyTest tests:
 
 ```
-pip install pytest_web_ui
+pip install pytest-web-ui
 pytest_web_ui /path/to/your/tests
 ```
 

@@ -13,7 +13,7 @@ def main():
         author_email="ryanc118@gmail.com",
         description="An interactive web UI test runner for PyTest",
         long_description=long_description,
-        long_description_content_type="test/markdown",
+        long_description_content_type="text/markdown",
         url="https://github.com/ryanc414/pytest_web_ui",
         packages=setuptools.find_packages(),
         classifiers=[
