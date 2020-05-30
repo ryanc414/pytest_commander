@@ -21,13 +21,20 @@ def main():
     logging.basicConfig(level=log_level)
 
     app, socketio = api.build_app(args.directory)
-    address = f"http://localhost:{args.port}/"
+    address = f"http://{display_host(args.host)}:{args.port}/"
     LOGGER.critical(f"View in your browser at {address}")
 
     if not args.no_browse:
         webbrowser.open(address)
 
-    socketio.run(app, port=args.port, debug=args.debug)
+    socketio.run(app, host=args.host, port=args.port, debug=args.debug)
+
+
+def display_host(host: str) -> str:
+    """For the special zero IPv4/6 addresses, return localhost for access."""
+    if host == "0.0.0.0" or host == "::":
+        return "localhost"
+    return host
 
 
 def parse_args() -> argparse.Namespace:
@@ -39,6 +46,9 @@ def parse_args() -> argparse.Namespace:
         nargs="?",
         default=".",
         help=f"Directory to find PyTest test modules, defaults to cwd ({os.getcwd()})",
+    )
+    parser.add_argument(
+        "--host", default="localhost", help=f"Host to bind to, defaults to localhost.",
     )
     parser.add_argument(
         "-p",
