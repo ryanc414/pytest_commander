@@ -9,7 +9,7 @@ import {
 import { StyleSheet, css } from "aphrodite";
 import _ from "lodash";
 
-import { COLWIDTH, BranchNode } from "./Common";
+import { COLWIDTH, BranchNode, LeafNode } from "./Common";
 import { NavColumn } from "./NavColumn";
 import { NavBreadcrumbs, InfoPane, Message } from "./CentrePane";
 
@@ -31,7 +31,7 @@ const App = () => {
 };
 
 interface TestRunnerProps {
-  url: string,
+  url: string | null,
 }
 
 interface TestRunnerState {
@@ -130,22 +130,26 @@ class TestRunner extends React.Component<TestRunnerProps, TestRunnerState> {
       );
     }
 
-    const selectedBranch = getSelectedBranch(
-      selection,
-      this.state.resultTree,
-    );
+    try {
+      const { childBranches, childLeaves } = getCurrSelection(
+        selection,
+        this.state.resultTree,
+      );
 
-    if (!selectedBranch) {
-      return <MessageDisplay message="404 Page Not Found" selection={selection} />;
+      return (
+        <TestRunnerDisplay
+          childBranches={childBranches}
+          childLeaves={childLeaves}
+          selection={selection}
+          handleTestRun={this.handleTestRun}
+        />
+      );
+    } catch (error) {
+      if (error instanceof SelectionNotFound) {
+        return <MessageDisplay message="404 Page Not Found" selection={selection} />;
+      }
+      throw error;
     }
-
-    return (
-      <TestRunnerDisplay
-        selectedBranch={selectedBranch}
-        selection={selection}
-        handleTestRun={this.handleTestRun}
-      />
-    );
   }
 }
 
@@ -154,7 +158,11 @@ class TestRunner extends React.Component<TestRunnerProps, TestRunnerState> {
  * short_ids of the currently selected branches.
  * @param url URL path string
  */
-const parseSelection = (url: string): Array<string> => {
+const parseSelection = (url: string | null): Array<string> => {
+  if (!url) {
+    return [];
+  }
+
   const trimmedPath = url.replace(/^\/+|\/+$/g, '');
   if (trimmedPath.length === 0) {
     return [];
@@ -177,7 +185,8 @@ const updateResultTree = (
 };
 
 interface TestRunnerDisplayProps {
-  selectedBranch: BranchNode | null,
+  childBranches: { [key: string]: BranchNode },
+  childLeaves: { [key: string]: LeafNode },
   selection: Array<string>,
   handleTestRun: (short_id: string) => void,
 }
@@ -190,13 +199,13 @@ interface TestRunnerDisplayProps {
 const TestRunnerDisplay = (props: TestRunnerDisplayProps) => {
   const query = useQuery();
   const selectedLeafID = query.get("selectedLeaf");
-  const selectedLeaf = (selectedLeafID && props.selectedBranch) ?
-    props.selectedBranch.child_leaves[selectedLeafID] : null;
+  const selectedLeaf = selectedLeafID ? props.childLeaves[selectedLeafID] : null;
 
   return (
     <div>
       <NavColumn
-        selectedBranch={props.selectedBranch}
+        childBranches={props.childBranches}
+        childLeaves={props.childLeaves}
         selectedLeafID={selectedLeafID}
         selection={props.selection}
         handleTestRun={props.handleTestRun}
@@ -220,7 +229,8 @@ interface MessageDisplayProps {
 const MessageDisplay = (props: MessageDisplayProps) => (
   <div>
     <NavColumn
-      selectedBranch={null}
+      childBranches={{}}
+      childLeaves={{}}
       selectedLeafID={null}
       selection={[]}
       handleTestRun={(nodeid: string) => undefined}
@@ -243,24 +253,35 @@ const useQuery = () => new URLSearchParams(useLocation().search);
  * loaded.
  * @param state App state
  */
-const getSelectedBranch = (
+const getCurrSelection = (
   selection: Array<string>, resultTree: BranchNode | null
-) => {
-  if (resultTree) {
-    const selectedBranch = selection.reduce(
-      (node: BranchNode | undefined, selection: string) => (
-        node?.child_branches[selection]
-      ),
-      resultTree,
-    );
-    if (selectedBranch) {
-      return selectedBranch;
-    } else {
-      console.log(selection);
-      return null;
-    }
+): {
+  childBranches: { [key: string]: BranchNode },
+  childLeaves: { [key: string]: LeafNode },
+} => {
+  if (!resultTree) {
+    return { childBranches: {}, childLeaves: {} };
+  }
+  if (selection.length === 0) {
+    return {
+      childBranches: { [resultTree.short_id]: resultTree },
+      childLeaves: {},
+    };
+  }
+
+  const selectedBranch = selection.slice(1).reduce(
+    (node: BranchNode | undefined, selection: string) => (
+      node?.child_branches[selection]
+    ),
+    resultTree,
+  );
+  if (selectedBranch) {
+    return {
+      childBranches: selectedBranch.child_branches,
+      childLeaves: selectedBranch.child_leaves
+    };
   } else {
-    return null;
+    throw new SelectionNotFound("Not found", selection);
   }
 };
 
@@ -270,5 +291,14 @@ const styles = StyleSheet.create({
     padding: "10px 10px",
   },
 });
+
+class SelectionNotFound extends Error {
+  public selection: Array<string>
+
+  constructor(message: string, selection: Array<string>) {
+    super(message);
+    this.selection = selection;
+  }
+}
 
 export default App;

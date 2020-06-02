@@ -53,6 +53,7 @@ class Node(abc.ABC):
 
     def __init__(self):
         self.parent_ids: List[str] = []
+        self._short_id = None
 
     @property
     @abc.abstractmethod
@@ -61,9 +62,10 @@ class Node(abc.ABC):
         raise NotImplementedError
 
     @property
+    @abc.abstractmethod
     def short_id(self) -> str:
-        """Short ID."""
-        return self.nodeid.split("::")[-1]
+        """Return the short ID for this node."""
+        raise NotImplementedError
 
     @property
     def status(self) -> TestState:
@@ -102,12 +104,14 @@ class BranchNode(Node):
     """
 
     def __init__(
-        self, collector: nodes.Collector,
+        self, collector: nodes.Collector, short_id: Optional[str] = None,
     ):
         self._pytest_node = collector
         self.child_branches: Dict[str, BranchNode] = {}
         self.child_leaves: Dict[str, LeafNode] = {}
         self.parent_ids: List[str] = []
+        self.environment = None
+        self._short_id = short_id
 
     def __eq__(self, other: object) -> bool:
         """Compare two BranchNodes for equality."""
@@ -139,6 +143,13 @@ class BranchNode(Node):
     def nodeid(self) -> str:
         """Unique ID of this node, used for indexing."""
         return self._pytest_node.nodeid
+
+    @property
+    def short_id(self) -> str:
+        """Short ID."""
+        if self._short_id:
+            return self._short_id
+        return self.nodeid.split("::")[-1]
 
     @property
     def fspath(self):
@@ -182,6 +193,11 @@ class LeafNode(Node):
         return self._pytest_node.nodeid
 
     @property
+    def short_id(self) -> str:
+        """Short ID."""
+        return self.nodeid.split("::")[-1]
+
+    @property
     def longrepr(self) -> Optional[str]:
         if self.report is None or self.report.longrepr is None:
             return None
@@ -214,10 +230,12 @@ class LeafNode(Node):
         self.report = None
 
 
-def build_from_session(session: nodes.Session,) -> Tuple[BranchNode, Dict[str, Node]]:
+def build_from_session(
+    session: nodes.Session, root_id: str
+) -> Tuple[BranchNode, Dict[str, Node]]:
     """Build a result tree from the PyTest session object."""
-    root = BranchNode(session)
-    nodes_index: Dict[str, Node] = {}
+    root = BranchNode(session, short_id=root_id)
+    nodes_index: Dict[str, Node] = {session.nodeid: root}
 
     for item in session.items:
         collectors = item.listchain()[1:-1]
