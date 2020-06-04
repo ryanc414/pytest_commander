@@ -1,14 +1,19 @@
 """PyTest UI server main entry point."""
 import argparse
 import logging
+import threading
 import os
 import sys
 import webbrowser
 import time
 
+import requests
 from pytest_web_ui import api
 
 LOGGER = logging.getLogger(__name__)
+
+# Time to poll the HTTP server to be ready, in seconds.
+POLL_TIME = 0.2
 
 
 def main():
@@ -20,14 +25,15 @@ def main():
     log_level = logging.DEBUG if args.debug else logging.CRITICAL
     logging.basicConfig(level=log_level)
 
-    app, socketio = api.build_app(args.directory)
+    app, socketio, environment = api.build_app(args.directory)
     address = f"http://{display_host(args.host)}:{args.port}/"
     LOGGER.critical(f"View in your browser at {address}")
 
     if not args.no_browse:
-        webbrowser.open(address)
+        threading.Thread(target=open_webbrowser, args=(address,)).start()
 
-    socketio.run(app, host=args.host, port=args.port, debug=args.debug)
+    with environment:
+        socketio.run(app, host=args.host, port=args.port, debug=args.debug)
 
 
 def display_host(host: str) -> str:
@@ -70,6 +76,20 @@ def parse_args() -> argparse.Namespace:
     )
 
     return parser.parse_args()
+
+
+def open_webbrowser(address: str):
+    """Wait for the server to be ready, then open the app in the webbrowser."""
+    status_code = None
+    while status_code != 200:
+        try:
+            rsp = requests.get(address)
+            status_code = rsp.status_code
+        except requests.ConnectionError:
+            pass
+        time.sleep(0.1)
+
+    webbrowser.open(address)
 
 
 if __name__ == "__main__":

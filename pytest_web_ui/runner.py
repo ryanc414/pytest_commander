@@ -3,6 +3,7 @@ import logging
 import os
 from typing import Tuple, Dict, Callable
 import flask_socketio  # type: ignore
+import subprocess
 
 import pytest  # type: ignore
 from _pytest import reports  # type: ignore
@@ -21,6 +22,7 @@ class PyTestRunner:
         self._socketio = socketio
         self._branch_schema = result_tree.BranchNodeSchema()
         self._leaf_schema = result_tree.LeafNodeSchema()
+        self.environment = EnvironmentManager(directory)
 
     def run_tests(self, nodeid: str):
         """
@@ -77,6 +79,25 @@ class PyTestRunner:
 
         LOGGER.debug("Sending update for nodeid %s", updated_node.nodeid)
         self._socketio.emit("update", parents_slice)
+
+
+class EnvironmentManager:
+
+    COMPOSE_FILENAME = "docker_compose.yml"
+
+    def __init__(self, directory):
+        self._directory = directory
+        self._proc = None
+
+    def __enter__(self):
+        compose_path = os.path.join(self._directory, self.COMPOSE_FILENAME)
+        if os.path.exists(compose_path):
+            self._proc = subprocess.Popen(["docker-compose", "-f", compose_path, "up"])
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        if self._proc:
+            self._proc.wait()
 
 
 def _init_result_tree(

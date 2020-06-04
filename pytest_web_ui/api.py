@@ -13,7 +13,9 @@ from pytest_web_ui import result_tree
 LOGGER = logging.getLogger(__name__)
 
 
-def build_app(directory: str) -> Tuple[flask.Flask, flask_socketio.SocketIO]:
+def build_app(
+    directory: str,
+) -> Tuple[flask.Flask, flask_socketio.SocketIO, runner.EnvironmentManager]:
     """Build a Flask app to serve the API and static files."""
     build_dir = pkg_resources.resource_filename(__name__, "web_client/build")
     LOGGER.debug("build_dir: %s", build_dir)
@@ -22,8 +24,6 @@ def build_app(directory: str) -> Tuple[flask.Flask, flask_socketio.SocketIO]:
 
     app = flask.Flask(__name__, root_path=build_dir, static_folder=static_dir)
     branch_schema = result_tree.BranchNodeSchema()
-    shallow_branch_schema = result_tree.NodeSchema()
-    leaf_schema = result_tree.LeafNodeSchema()
     socketio = flask_socketio.SocketIO(app)
     test_runner = runner.PyTestRunner(directory, socketio)
 
@@ -53,4 +53,4 @@ def build_app(directory: str) -> Tuple[flask.Flask, flask_socketio.SocketIO]:
     def disconnect():
         LOGGER.debug("Client disconnected")
 
-    return app, socketio
+    return app, socketio, test_runner.environment

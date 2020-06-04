@@ -1,0 +1,8 @@
+version: '3.8'
+services:
+  http-echo:
+    restart: always
+    command: -text="hello world"
+    image: "hashicorp/http-echo"
+    ports:
+      - 5678:5678

@@ -44,6 +44,12 @@
     "pytest_examples/test_b.py": {
       "child_branches": {},
       "child_leaves": {
+        "test_http_service": {
+          "longrepr": null,
+          "nodeid": "pytest_examples/test_b.py::test_http_service",
+          "short_id": "test_http_service",
+          "status": "init"
+        },
         "test_one": {
           "longrepr": null,
           "nodeid": "pytest_examples/test_b.py::test_one",
@@ -64,6 +70,6 @@
   },
   "child_leaves": {},
   "nodeid": "",
-  "short_id": "",
+  "short_id": "/Users/ryan/code/pytest_web_ui/tests/../pytest_examples",
   "status": "init"
 }

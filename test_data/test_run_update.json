@@ -4,19 +4,19 @@
     "args": [
       {
         "status": "running",
-        "short_id": "",
         "nodeid": "",
+        "short_id": "/Users/ryan/code/pytest_web_ui/tests/../pytest_examples",
         "child_branches": {
           "pytest_examples/test_a.py": {
             "status": "running",
-            "short_id": "pytest_examples/test_a.py",
             "nodeid": "pytest_examples/test_a.py",
+            "short_id": "pytest_examples/test_a.py",
             "child_leaves": {
               "test_one": {
                 "longrepr": null,
                 "status": "running",
-                "short_id": "test_one",
-                "nodeid": "pytest_examples/test_a.py::test_one"
+                "nodeid": "pytest_examples/test_a.py::test_one",
+                "short_id": "test_one"
               }
             }
           }
@@ -30,19 +30,19 @@
     "args": [
       {
         "status": "passed",
-        "short_id": "",
         "nodeid": "",
+        "short_id": "/Users/ryan/code/pytest_web_ui/tests/../pytest_examples",
         "child_branches": {
           "pytest_examples/test_a.py": {
             "status": "passed",
-            "short_id": "pytest_examples/test_a.py",
             "nodeid": "pytest_examples/test_a.py",
+            "short_id": "pytest_examples/test_a.py",
             "child_leaves": {
               "test_one": {
                 "longrepr": null,
                 "status": "passed",
-                "short_id": "test_one",
-                "nodeid": "pytest_examples/test_a.py::test_one"
+                "nodeid": "pytest_examples/test_a.py::test_one",
+                "short_id": "test_one"
               }
             }
           }
