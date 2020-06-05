@@ -17,7 +17,12 @@ Features
   instead of having to scroll up through many screens of terminal output.
 - Test files and dependencies are reloaded every time so you can run, tweak your
   code, then run again in a fast iteration cycle.
-- Runs on any modern OS (tested on Win10, macOS and Ubuntu)
+- Runs on any modern OS and browser (tested on Win10, macOS and Ubuntu with
+  Chrome, Firefox and Safari). IE is not supported.
+- Automatically start and stop docker services while running if specified in a
+  `docker-compose.yml` file in the root test directory.
+- Tests are run in separate processes and reloaded for each invocation, allowing
+  tests to be tweaked and re-run without restarting the main process.
 
 Prerequisites
 =============
@@ -40,7 +45,7 @@ want to make sure that all additional dependencies required to run your tests
 are installed into the same virtual environment.
 
 When you run with default options, the web app to browse and run tests should be
-opened automatically in your default browser. To view full docs for the 
+opened automatically in your default browser. To view full docs for the
 command-line parameters, run `pytest_web_ui --help`.
 
 Build from source
