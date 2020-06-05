@@ -25,13 +25,15 @@ class PyTestRunner:
 
     _ACTIVE_LOOP_SLEEP = 0.1  # seconds
 
-    def __init__(self, directory: str, socketio: flask_socketio.SocketIO):
+    def __init__(
+        self, directory: str, socketio: flask_socketio.SocketIO, use_docker: bool
+    ):
         self._directory = directory
         self.result_tree, self._result_index = _init_result_tree(directory)
         self._socketio = socketio
         self._branch_schema = result_tree.BranchNodeSchema()
         self._leaf_schema = result_tree.LeafNodeSchema()
-        self.environment = EnvironmentManager(directory)
+        self.environment = EnvironmentManager(directory, use_docker)
 
     def run_tests(self, nodeid: str):
         """
@@ -112,13 +114,14 @@ class EnvironmentManager:
 
     COMPOSE_FILENAME = "docker_compose.yml"
 
-    def __init__(self, directory):
+    def __init__(self, directory: str, enable: bool):
         self._directory = directory
         self._proc = None
+        self._enable = enable
 
     def __enter__(self):
         compose_path = os.path.join(self._directory, self.COMPOSE_FILENAME)
-        if os.path.exists(compose_path):
+        if self._enable and os.path.exists(compose_path):
             self._proc = subprocess.Popen(["docker-compose", "-f", compose_path, "up"])
         return self
 

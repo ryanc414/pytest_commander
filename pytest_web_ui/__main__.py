@@ -25,7 +25,7 @@ def main():
     log_level = logging.DEBUG if args.debug else logging.CRITICAL
     logging.basicConfig(level=log_level)
 
-    app, socketio, environment = api.build_app(args.directory)
+    app, socketio, environment = api.build_app(args.directory, not args.no_docker)
     address = f"http://{display_host(args.host)}:{args.port}/"
     LOGGER.critical(f"View in your browser at {address}")
 
@@ -73,6 +73,11 @@ def parse_args() -> argparse.Namespace:
         "--no-browse",
         action="store_true",
         help="Do not automatically open a web browser to view the UI",
+    )
+    parser.add_argument(
+        "--no-docker",
+        action="store_true",
+        help="Do not automatically start docker services",
     )
 
     return parser.parse_args()
