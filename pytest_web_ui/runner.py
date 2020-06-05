@@ -1,20 +1,29 @@
 """PyTestRunner class and related functions."""
+from concurrent import futures
 import logging
 import os
-from typing import Tuple, Dict, Callable
-import flask_socketio  # type: ignore
+import multiprocessing
+import queue
 import subprocess
+from typing import Tuple, Dict, Callable, List, Union
+
+import eventlet  # type: ignore
+import flask_socketio  # type: ignore
 
 import pytest  # type: ignore
 from _pytest import reports  # type: ignore
+from py._path import local  # type: ignore
 
 from pytest_web_ui import result_tree
 
 LOGGER = logging.getLogger(__name__)
+_DONE = 0xDEAD
 
 
 class PyTestRunner:
     """Owns the test result tree and handles running tests and updating the results."""
+
+    _ACTIVE_LOOP_SLEEP = 0.1  # seconds
 
     def __init__(self, directory: str, socketio: flask_socketio.SocketIO):
         self._directory = directory
@@ -32,25 +41,26 @@ class PyTestRunner:
         result_node = self._result_index[nodeid]
         result_node.status = result_tree.TestState.RUNNING
         self._send_update(result_node)
+        self._socketio.start_background_task(self._run_test, nodeid)
 
-        self._socketio.start_background_task(
-            self._run_test, nodeid,
+    def _run_test(self, nodeid: str):
+        result_queue: "multiprocessing.Queue[Union[reports.TestReport, int]]" = multiprocessing.Queue()
+        proc = multiprocessing.context.SpawnContext.Process(
+            target=_run_test,
+            args=(nodeid, result_queue, self.result_tree.fspath, self._directory),
         )
+        proc.start()
 
-    def _run_test(self, nodeid):
-        """
-        Runs a test or tests at the given nodeid, update our report tree
-        and notify the update over the websocket.
-        """
-        full_path = self._get_full_path(nodeid)
-        LOGGER.info("full_path: %s", full_path)
-        pytest.main([full_path], plugins=[TestRunPlugin(self._add_test_report)])
+        while True:
+            try:
+                val = result_queue.get_nowait()
+                if val == _DONE:
+                    break
+                self._add_test_report(val)
+            except queue.Empty:
+                eventlet.sleep(self._ACTIVE_LOOP_SLEEP)
+
         self._send_update(self._result_index[nodeid])
-
-    def _get_full_path(self, nodeid: str) -> str:
-        if not nodeid:
-            return self._directory
-        return str(self.result_tree.fspath / nodeid.replace("/", os.sep))
 
     def _add_test_report(self, report: reports.TestReport):
         """Add a test report into our result tree."""
@@ -79,6 +89,23 @@ class PyTestRunner:
 
         LOGGER.debug("Sending update for nodeid %s", updated_node.nodeid)
         self._socketio.emit("update", parents_slice)
+
+
+def _run_test(
+    nodeid: str, queue: multiprocessing.Queue, root_dir: local.LocalPath, test_dir: str
+):
+    full_path = _get_full_path(nodeid, root_dir, test_dir)
+    LOGGER.debug("full_path: %s", full_path)
+    plugin = TestRunPlugin(queue=queue)
+    pytest.main([full_path], plugins=[plugin])
+    queue.put(_DONE)
+
+
+def _get_full_path(nodeid: str, root_dir: local.LocalPath, test_dir: str) -> str:
+    LOGGER.critical("typeof root_dir: %s", type(root_dir))
+    if not nodeid:
+        return test_dir
+    return str(root_dir / nodeid.replace("/", os.sep))
 
 
 class EnvironmentManager:
@@ -126,10 +153,8 @@ class CollectPlugin:
 class TestRunPlugin:
     """PyTest plugin used to run tests and store results in our tree."""
 
-    def __init__(
-        self, report_callback: Callable[[reports.TestReport], None],
-    ):
-        self._report_callback = report_callback
+    def __init__(self, queue=multiprocessing.Queue):
+        self._queue = queue
 
     def pytest_runtest_logreport(self, report):
         """
@@ -139,4 +164,4 @@ class TestRunPlugin:
         # Currently do nothing for setup/teardown.
         if report.when != "call":
             return
-        self._report_callback(report)
+        self._queue.put(report)

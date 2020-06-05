@@ -2,6 +2,7 @@
 import json
 import os
 
+import eventlet
 import pytest
 
 from pytest_web_ui import api
@@ -42,17 +43,22 @@ def test_report_skeleton(clients):
 def test_run_test(clients):
     _, socket_client = clients
     socket_client.emit("run test", "pytest_examples/test_a.py::test_one")
-    rcvd = socket_client.get_received()
-    assert len(rcvd) == 2
+
+    total_rcvd = []
+    while len(total_rcvd) < 2:
+        rcvd = socket_client.get_received()
+        eventlet.sleep(0.1)
+        total_rcvd.extend(rcvd)
+
     json_filepath = os.path.join(
         os.path.dirname(__file__), os.pardir, "test_data", "test_run_update.json"
     )
 
     # Uncomment to update expected JSON.
     # with open(json_filepath, "w") as f:
-    #     json.dump(rcvd, f, indent=2)
+    #     json.dump(total_rcvd, f, indent=2)
 
     with open(json_filepath) as f:
         expected_rcvd = json.load(f)
 
-    assert rcvd == expected_rcvd
+    assert total_rcvd == expected_rcvd
