@@ -8,6 +8,7 @@ black = "*"
 pytest-runner = {editable = true,path = "."}
 mypy = "*"
 pylint = "*"
+twine = "*"
 
 [packages]
 pytest = "*"
