@@ -134,13 +134,32 @@ def _init_result_tree(
     directory: str,
 ) -> Tuple[result_tree.BranchNode, Dict[str, result_tree.Node]]:
     """Collect the tests and initialise the result tree skeleton."""
-    plugin = CollectPlugin()
-    ret = pytest.main(["--collect-only", directory], plugins=[plugin])
-    if ret != 0:
-        raise RuntimeError(f"Failed to collect tests from {directory}")
+    root_node = result_tree.BranchNode(
+        nodeid=directory.replace(os.sep, "/"),
+        fspath=directory,
+        short_id=os.path.basename(directory),
+    )
+    nodes_index = {}
 
-    session = plugin.session
-    return result_tree.build_from_session(session, directory)
+    with os.scandir(directory) as it:
+        for entry in it:
+            if entry.is_file() and entry.name.endswith(".py"):
+                plugin = CollectPlugin()
+                ret = pytest.main(["--collect-only", entry.path], plugins=[plugin])
+                if ret != 0:
+                    raise RuntimeError(f"Failed to collect tests from {entry.path}")
+
+                session = plugin.session
+                node, index = result_tree.build_from_session(session, entry.path)
+            elif entry.is_dir():
+                node, index = _init_result_tree(entry.path)
+            else:
+                continue
+
+            root_node.child_branches[node.short_id] = node
+            nodes_index.update(index)
+
+    return root_node, nodes_index
 
 
 class CollectPlugin:

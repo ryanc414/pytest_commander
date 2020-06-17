@@ -104,14 +104,15 @@ class BranchNode(Node):
     """
 
     def __init__(
-        self, collector: nodes.Collector, short_id: Optional[str] = None,
+        self, nodeid: str, fspath: str, short_id: Optional[str] = None,
     ):
-        self._pytest_node = collector
+        self._nodeid = nodeid
+        self._fspath = fspath
+        self._short_id = short_id
         self.child_branches: Dict[str, BranchNode] = {}
         self.child_leaves: Dict[str, LeafNode] = {}
         self.parent_ids: List[str] = []
         self.environment = None
-        self._short_id = short_id
 
     def __eq__(self, other: object) -> bool:
         """Compare two BranchNodes for equality."""
@@ -122,7 +123,7 @@ class BranchNode(Node):
 
     def __repr__(self) -> str:
         """String representation of this node."""
-        return f"BranchNode <{self._pytest_node} {self.status}>"
+        return f"BranchNode <{self.nodeid} {self.status}>"
 
     def pretty_format(self) -> str:
         """Output a pretty-formatted string of the whole tree, for debug purposes."""
@@ -142,7 +143,7 @@ class BranchNode(Node):
     @property
     def nodeid(self) -> str:
         """Unique ID of this node, used for indexing."""
-        return self._pytest_node.nodeid
+        return self._nodeid
 
     @property
     def short_id(self) -> str:
@@ -154,7 +155,7 @@ class BranchNode(Node):
     @property
     def fspath(self):
         """Filesystem path this test node corresponds to."""
-        return self._pytest_node.fspath
+        return self._fspath
 
     def _get_status(self) -> TestState:
         """Return status of child entries."""
@@ -234,7 +235,7 @@ def build_from_session(
     session: nodes.Session, root_id: str
 ) -> Tuple[BranchNode, Dict[str, Node]]:
     """Build a result tree from the PyTest session object."""
-    root = BranchNode(session, short_id=root_id)
+    root = BranchNode(nodeid=session.nodeid, fspath=session.fspath, short_id=root_id)
     nodes_index: Dict[str, Node] = {session.nodeid: root}
 
     for item in session.items:
@@ -294,7 +295,7 @@ def _ensure_branch(
     try:
         child = node.child_branches[short_id]
     except KeyError:
-        child = BranchNode(collector=next_col)
+        child = BranchNode(nodeid=next_col.nodeid, fspath=next_col.fspath)
         nodes_index[child.nodeid] = child
         node.child_branches[short_id] = child
 
