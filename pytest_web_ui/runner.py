@@ -6,13 +6,13 @@ import multiprocessing
 import queue
 import subprocess
 from typing import Tuple, Dict, Callable, List, Union
+import pprint
 
 import eventlet  # type: ignore
 import flask_socketio  # type: ignore
 
 import pytest  # type: ignore
 from _pytest import reports  # type: ignore
-from py._path import local  # type: ignore
 
 from pytest_web_ui import result_tree
 
@@ -93,9 +93,7 @@ class PyTestRunner:
         self._socketio.emit("update", parents_slice)
 
 
-def _run_test(
-    nodeid: str, queue: multiprocessing.Queue, root_dir: local.LocalPath, test_dir: str
-):
+def _run_test(nodeid: str, queue: multiprocessing.Queue, root_dir: str, test_dir: str):
     full_path = _get_full_path(nodeid, root_dir, test_dir)
     LOGGER.debug("full_path: %s", full_path)
     plugin = TestRunPlugin(queue=queue)
@@ -103,11 +101,10 @@ def _run_test(
     queue.put(_DONE)
 
 
-def _get_full_path(nodeid: str, root_dir: local.LocalPath, test_dir: str) -> str:
-    LOGGER.critical("typeof root_dir: %s", type(root_dir))
+def _get_full_path(nodeid: str, root_dir: str, test_dir: str) -> str:
     if not nodeid:
         return test_dir
-    return str(root_dir / nodeid.replace("/", os.sep))
+    return nodeid.replace("/", os.sep)
 
 
 class EnvironmentManager:
@@ -156,8 +153,9 @@ def _init_result_tree(
             else:
                 continue
 
-            root_node.child_branches[node.short_id] = node
-            nodes_index.update(index)
+            if list(node.iter_children()):
+                root_node.child_branches[node.short_id] = node
+                nodes_index.update(index)
 
     return root_node, nodes_index
 

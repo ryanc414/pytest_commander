@@ -150,10 +150,10 @@ class BranchNode(Node):
         """Short ID."""
         if self._short_id:
             return self._short_id
-        return self.nodeid.split("::")[-1]
+        return self.nodeid.split("::")[-1].split("/")[-1]
 
     @property
-    def fspath(self):
+    def fspath(self) -> str:
         """Filesystem path this test node corresponds to."""
         return self._fspath
 
@@ -235,51 +235,49 @@ def build_from_session(
     session: nodes.Session, root_id: str
 ) -> Tuple[BranchNode, Dict[str, Node]]:
     """Build a result tree from the PyTest session object."""
-    root = BranchNode(nodeid=session.nodeid, fspath=session.fspath, short_id=root_id)
-    nodes_index: Dict[str, Node] = {session.nodeid: root}
+    root = BranchNode(
+        nodeid=session.nodeid, fspath=str(session.fspath), short_id=root_id
+    )
 
     for item in session.items:
         collectors = item.listchain()[1:-1]
-        branch = _ensure_branch(root, collectors, nodes_index)
+        branch = _ensure_branch(root, collectors)
         leaf = LeafNode(item)
         branch.child_leaves[leaf.short_id] = leaf
-        nodes_index[item.nodeid] = leaf
 
-    _remove_singletons(root)
+    pruned_tree = _prune_tree(root)
+    if pruned_tree is None:
+        raise RuntimeError("No tests were found")
+    else:
+        root = pruned_tree
 
-    for branch in root.child_branches.values():
-        _set_parent_ids(branch)
-
+    nodes_index = _build_index(root)
     return root, nodes_index
 
 
-def _remove_singletons(root: BranchNode):
+def _prune_tree(node: BranchNode) -> Optional[BranchNode]:
     """
     Recursively remove all branch nodes from the tree that only have a single child,
     instead directly linking to that child.
     """
-    new_child_branches = {}
+    children = list(node.iter_children())
+    if not children:
+        return None
+    if len(children) == 1 and isinstance(children[0], BranchNode):
+        node = children[0]
 
-    for node in root.child_branches.values():
-        _remove_singletons(node)
-        children = list(node.iter_children())
-        assert len(children) != 0
-        if len(children) != 1:
-            new_child_branches[node.short_id] = node
-            continue
-
-        child = children[0]
-        if isinstance(child, BranchNode):
-            new_child_branches[child.short_id] = child
-        elif isinstance(child, LeafNode):
-            root.child_leaves[child.short_id] = child
-
-    root.child_branches = new_child_branches
+    child_branches = {
+        short_id: _prune_tree(child) for short_id, child in node.child_branches.items()
+    }
+    node.child_branches = {
+        short_id: child
+        for short_id, child in child_branches.items()
+        if child is not None
+    }
+    return node
 
 
-def _ensure_branch(
-    node: BranchNode, collectors: List[nodes.Collector], nodes_index: Dict[str, Node]
-) -> BranchNode:
+def _ensure_branch(node: BranchNode, collectors: List[nodes.Collector],) -> BranchNode:
     """
     Retrieve the branch node under the given root node that corresponds to the given
     chain of collectors. If any branch nodes do not yet exist, they will be
@@ -295,11 +293,10 @@ def _ensure_branch(
     try:
         child = node.child_branches[short_id]
     except KeyError:
-        child = BranchNode(nodeid=next_col.nodeid, fspath=next_col.fspath)
-        nodes_index[child.nodeid] = child
+        child = BranchNode(nodeid=next_col.nodeid, fspath=str(next_col.fspath))
         node.child_branches[short_id] = child
 
-    return _ensure_branch(child, rest, nodes_index)
+    return _ensure_branch(child, rest)
 
 
 def _set_parent_ids(node: BranchNode):
@@ -313,6 +310,16 @@ def _set_parent_ids(node: BranchNode):
 
     for child_leaf in node.child_leaves.values():
         child_leaf.parent_ids = node.parent_ids + [node.short_id]
+
+
+def _build_index(node: BranchNode) -> Dict[str, Node]:
+    index: Dict[str, Node] = {node.nodeid: node}
+    for child_leaf in node.child_leaves.values():
+        index[child_leaf.nodeid] = child_leaf
+    for child_branch in node.child_branches.values():
+        index.update(_build_index(child_branch))
+
+    return index
 
 
 class NodeSchema(marshmallow.Schema):
