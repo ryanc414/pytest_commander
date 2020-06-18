@@ -112,18 +112,20 @@ class EnvironmentManager:
     COMPOSE_FILENAME = "docker_compose.yml"
 
     def __init__(self, directory: str, enable: bool):
-        self._directory = directory
+        self._compose_path = os.path.join(directory, self.COMPOSE_FILENAME)
         self._proc = None
         self._enable = enable
 
     def __enter__(self):
-        compose_path = os.path.join(self._directory, self.COMPOSE_FILENAME)
-        if self._enable and os.path.exists(compose_path):
-            self._proc = subprocess.Popen(["docker-compose", "-f", compose_path, "up"])
+        if self._enable and os.path.exists(self._compose_path):
+            self._proc = subprocess.Popen(
+                ["docker-compose", "-f", self._compose_path, "up"]
+            )
         return self
 
     def __exit__(self, exc_type, exc_value, exc_tb):
         if self._proc:
+            subprocess.check_call(["docker-compose", "-f", self._compose_path, "down"])
             self._proc.wait()
 
 
