@@ -1,6 +1,6 @@
 {
   "child_branches": {
-    "pytest_examples/test_a.py": {
+    "test_a.py": {
       "child_branches": {
         "TestSuite": {
           "child_branches": {},
@@ -38,10 +38,10 @@
         }
       },
       "nodeid": "pytest_examples/test_a.py",
-      "short_id": "pytest_examples/test_a.py",
+      "short_id": "test_a.py",
       "status": "init"
     },
-    "pytest_examples/test_b.py": {
+    "test_b.py": {
       "child_branches": {},
       "child_leaves": {
         "test_http_service": {
@@ -64,12 +64,12 @@
         }
       },
       "nodeid": "pytest_examples/test_b.py",
-      "short_id": "pytest_examples/test_b.py",
+      "short_id": "test_b.py",
       "status": "init"
     }
   },
   "child_leaves": {},
-  "nodeid": "",
-  "short_id": "/Users/ryan/code/pytest_web_ui/tests/../pytest_examples",
+  "nodeid": "/Users/ryan/code/pytest_web_ui/tests/../pytest_examples",
+  "short_id": "pytest_examples",
   "status": "init"
 }
