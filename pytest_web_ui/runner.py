@@ -71,7 +71,7 @@ class PyTestRunner:
         result_node.report = report
 
     def _send_update(self, updated_node: result_tree.Node):
-        if not updated_node.nodeid:
+        if updated_node.nodeid == self.result_tree.nodeid:
             parents_slice = self._branch_schema.dump(updated_node)
         else:
             parents_slice, parent_node = result_tree.serialize_parents_slice(
@@ -131,12 +131,21 @@ def _init_result_tree(
     directory: str,
 ) -> Tuple[result_tree.BranchNode, Dict[str, result_tree.Node]]:
     """Collect the tests and initialise the result tree skeleton."""
+    node, index = _init_result_tree_recur(directory)
+    for child_branch in node.child_branches.values():
+        result_tree.set_parent_ids(child_branch)
+    return node, index
+
+
+def _init_result_tree_recur(
+    directory: str,
+) -> Tuple[result_tree.BranchNode, Dict[str, result_tree.Node]]:
     root_node = result_tree.BranchNode(
         nodeid=directory.replace(os.sep, "/"),
         fspath=directory,
         short_id=os.path.basename(directory),
     )
-    nodes_index = {}
+    nodes_index = {root_node.nodeid: root_node}
 
     with os.scandir(directory) as it:
         for entry in it:
@@ -149,7 +158,7 @@ def _init_result_tree(
                 session = plugin.session
                 node, index = result_tree.build_from_session(session, entry.path)
             elif entry.is_dir():
-                node, index = _init_result_tree(entry.path)
+                node, index = _init_result_tree_recur(entry.path)
             else:
                 continue
 

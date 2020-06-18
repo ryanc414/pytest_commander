@@ -248,11 +248,9 @@ def build_from_session(
     pruned_tree = _prune_tree(root)
     if pruned_tree is None:
         raise RuntimeError("No tests were found")
-    else:
-        root = pruned_tree
 
-    nodes_index = _build_index(root)
-    return root, nodes_index
+    nodes_index = _build_index(pruned_tree)
+    return pruned_tree, nodes_index
 
 
 def _prune_tree(node: BranchNode) -> Optional[BranchNode]:
@@ -299,14 +297,14 @@ def _ensure_branch(node: BranchNode, collectors: List[nodes.Collector],) -> Bran
     return _ensure_branch(child, rest)
 
 
-def _set_parent_ids(node: BranchNode):
+def set_parent_ids(node: BranchNode):
     """
     Recursively set the parent_ids attribute on this node and all of its
     children, based on the current tree structure.
     """
     for child_branch in node.child_branches.values():
         child_branch.parent_ids = node.parent_ids + [node.short_id]
-        _set_parent_ids(child_branch)
+        set_parent_ids(child_branch)
 
     for child_leaf in node.child_leaves.values():
         child_leaf.parent_ids = node.parent_ids + [node.short_id]
