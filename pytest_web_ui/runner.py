@@ -145,7 +145,7 @@ def _init_result_tree_recur(
         fspath=directory,
         short_id=os.path.basename(directory),
     )
-    nodes_index = {root_node.nodeid: root_node}
+    nodes_index: Dict[str, result_tree.Node] = {root_node.nodeid: root_node}
 
     with os.scandir(directory) as it:
         for entry in it:
