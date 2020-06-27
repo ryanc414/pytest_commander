@@ -8,12 +8,15 @@ import pytest
 from pytest_web_ui import runner
 from pytest_web_ui import result_tree
 
+EXAMPLES_DIR = os.path.relpath(
+    os.path.join(os.path.dirname(__file__), os.pardir, "pytest_examples")
+)
+
 
 @pytest.fixture
 def pyrunner():
-    directory = os.path.join(os.path.dirname(__file__), os.pardir, "pytest_examples")
     socketio = mock.MagicMock()
-    return runner.PyTestRunner(directory, socketio)
+    return runner.PyTestRunner(EXAMPLES_DIR, socketio)
 
 
 def test_init(pyrunner):

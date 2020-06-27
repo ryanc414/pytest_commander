@@ -5,7 +5,7 @@
       {
         "status": "running",
         "short_id": "pytest_examples",
-        "nodeid": "/Users/ryan/code/pytest_web_ui/tests/../pytest_examples",
+        "nodeid": "pytest_examples",
         "child_branches": {
           "test_a.py": {
             "status": "running",
@@ -13,8 +13,8 @@
             "nodeid": "pytest_examples/test_a.py",
             "child_leaves": {
               "test_one": {
-                "status": "running",
                 "longrepr": null,
+                "status": "running",
                 "short_id": "test_one",
                 "nodeid": "pytest_examples/test_a.py::test_one"
               }
@@ -31,7 +31,7 @@
       {
         "status": "passed",
         "short_id": "pytest_examples",
-        "nodeid": "/Users/ryan/code/pytest_web_ui/tests/../pytest_examples",
+        "nodeid": "pytest_examples",
         "child_branches": {
           "test_a.py": {
             "status": "passed",
@@ -39,8 +39,8 @@
             "nodeid": "pytest_examples/test_a.py",
             "child_leaves": {
               "test_one": {
-                "status": "passed",
                 "longrepr": null,
+                "status": "passed",
                 "short_id": "test_one",
                 "nodeid": "pytest_examples/test_a.py::test_one"
               }

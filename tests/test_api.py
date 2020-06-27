@@ -1,5 +1,6 @@
 """Unit tests for the HTTP API."""
 import json
+from unittest import mock
 import os
 
 import eventlet
@@ -7,12 +8,15 @@ import pytest
 
 from pytest_web_ui import api
 
+EXAMPLES_DIR = os.path.relpath(
+    os.path.join(os.path.dirname(__file__), os.pardir, "pytest_examples")
+)
+
 
 @pytest.fixture
 def clients():
     """Setup and yield flask and socketIO test clients."""
-    directory = os.path.join(os.path.dirname(__file__), os.pardir, "pytest_examples",)
-    app, socketio = api.build_app(directory)
+    app, socketio = api.build_app(EXAMPLES_DIR)
     app.config["TESTING"] = True
     with app.test_client() as client:
         socket_client = socketio.test_client(app, flask_test_client=client)
@@ -62,3 +66,24 @@ def test_run_test(clients):
         expected_rcvd = json.load(f)
 
     assert total_rcvd == expected_rcvd
+
+
+@mock.patch("subprocess.check_call")
+@mock.patch("subprocess.Popen")
+def test_environment(mock_popen, mock_check_call, clients):
+    _, socket_client = clients
+
+    socket_client.emit("start env", EXAMPLES_DIR)
+    rcvd = socket_client.get_received()
+    assert len(rcvd) == 1
+    mock_popen.assert_called_once_with(
+        ["docker-compose", "-f", "pytest_examples/docker_compose.yml", "up"]
+    )
+
+    socket_client.emit("stop env", EXAMPLES_DIR)
+    rcvd = socket_client.get_received()
+    assert len(rcvd) == 1
+    mock_check_call.assert_called_once_with(
+        ["docker-compose", "-f", "pytest_examples/docker_compose.yml", "down"]
+    )
+

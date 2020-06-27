@@ -44,6 +44,16 @@ def build_app(directory: str) -> Tuple[flask.Flask, flask_socketio.SocketIO]:
         LOGGER.info("Running test: %s", nodeid)
         test_runner.run_tests(nodeid)
 
+    @socketio.on("start env")
+    def start_env(nodeid):
+        LOGGER.info("starting env: %s", nodeid)
+        test_runner.start_env(nodeid)
+
+    @socketio.on("stop env")
+    def stop_env(nodeid):
+        LOGGER.info("stopping env: %s", nodeid)
+        test_runner.stop_env(nodeid)
+
     @socketio.on("connect")
     def connect():
         LOGGER.debug("Client connected")

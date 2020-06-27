@@ -46,6 +46,28 @@ class PyTestRunner:
         self._send_update(result_node)
         self._socketio.start_background_task(self._run_test, nodeid)
 
+    def start_env(self, nodeid: str):
+        """
+        Start the environment for a node. The node must be a branch node that has
+        an environment which is not currently started.
+        """
+        node = self._result_index[nodeid]
+        if not isinstance(node, result_tree.BranchNode) or node.environment is None:
+            raise ValueError(f"cannot start environment for node {nodeid}")
+        node.environment.start()
+        self._send_update(node)
+
+    def stop_env(self, nodeid: str):
+        """
+        Stop the environment for a node. The node must be a branch node that has
+        an environment which is currently started.
+        """
+        node = self._result_index[nodeid]
+        if not isinstance(node, result_tree.BranchNode) or node.environment is None:
+            raise ValueError(f"cannot start environment for node {nodeid}")
+        node.environment.stop()
+        self._send_update(node)
+
     def _run_test(self, nodeid: str):
         result_queue: "multiprocessing.Queue[Union[reports.TestReport, int]]" = multiprocessing.Queue()
         proc = multiprocessing.context.SpawnContext.Process(

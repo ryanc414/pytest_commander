@@ -41,10 +41,11 @@ class EnvironmentManager:
         self._state = EnvironmentState.STARTED
         return self
 
-    def stop(self, exc_type, exc_value, exc_tb):
+    def stop(self):
         if self._state != EnvironmentState.STARTED:
             raise EnvironmentStateError(self.state, EnvironmentState.STOPPED)
 
         subprocess.check_call(["docker-compose", "-f", self._compose_path, "down"])
         self._proc.wait()
+        self._state = EnvironmentState.STOPPED
 
