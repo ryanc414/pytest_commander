@@ -69,6 +69,7 @@
     }
   },
   "child_leaves": {},
+  "environment_state": "EnvironmentState.STOPPED",
   "nodeid": "/Users/ryan/code/pytest_web_ui/tests/../pytest_examples",
   "short_id": "pytest_examples",
   "status": "init"

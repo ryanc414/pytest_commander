@@ -12,7 +12,7 @@ from pytest_web_ui import api
 def clients():
     """Setup and yield flask and socketIO test clients."""
     directory = os.path.join(os.path.dirname(__file__), os.pardir, "pytest_examples",)
-    app, socketio, _ = api.build_app(directory, use_docker=False)
+    app, socketio = api.build_app(directory)
     app.config["TESTING"] = True
     with app.test_client() as client:
         socket_client = socketio.test_client(app, flask_test_client=client)

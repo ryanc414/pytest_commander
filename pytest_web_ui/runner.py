@@ -1,5 +1,6 @@
 """PyTestRunner class and related functions."""
 from concurrent import futures
+import enum
 import logging
 import os
 import multiprocessing
@@ -15,6 +16,7 @@ import pytest  # type: ignore
 from _pytest import reports  # type: ignore
 
 from pytest_web_ui import result_tree
+from pytest_web_ui import environment
 
 LOGGER = logging.getLogger(__name__)
 _DONE = 0xDEAD
@@ -26,14 +28,13 @@ class PyTestRunner:
     _ACTIVE_LOOP_SLEEP = 0.1  # seconds
 
     def __init__(
-        self, directory: str, socketio: flask_socketio.SocketIO, use_docker: bool
+        self, directory: str, socketio: flask_socketio.SocketIO,
     ):
         self._directory = directory
         self.result_tree, self._result_index = _init_result_tree(directory)
         self._socketio = socketio
         self._branch_schema = result_tree.BranchNodeSchema()
         self._leaf_schema = result_tree.LeafNodeSchema()
-        self.environment = EnvironmentManager(directory, use_docker)
 
     def run_tests(self, nodeid: str):
         """
@@ -107,28 +108,6 @@ def _get_full_path(nodeid: str, root_dir: str, test_dir: str) -> str:
     return nodeid.replace("/", os.sep)
 
 
-class EnvironmentManager:
-
-    COMPOSE_FILENAME = "docker_compose.yml"
-
-    def __init__(self, directory: str, enable: bool):
-        self._compose_path = os.path.join(directory, self.COMPOSE_FILENAME)
-        self._proc = None
-        self._enable = enable
-
-    def __enter__(self):
-        if self._enable and os.path.exists(self._compose_path):
-            self._proc = subprocess.Popen(
-                ["docker-compose", "-f", self._compose_path, "up"]
-            )
-        return self
-
-    def __exit__(self, exc_type, exc_value, exc_tb):
-        if self._proc:
-            subprocess.check_call(["docker-compose", "-f", self._compose_path, "down"])
-            self._proc.wait()
-
-
 def _init_result_tree(
     directory: str,
 ) -> Tuple[result_tree.BranchNode, Dict[str, result_tree.Node]]:
@@ -146,6 +125,7 @@ def _init_result_tree_recur(
         nodeid=directory.replace(os.sep, "/"),
         fspath=directory,
         short_id=os.path.basename(directory),
+        env=environment.EnvironmentManager(directory),
     )
     nodes_index: Dict[str, result_tree.Node] = {root_node.nodeid: root_node}
 

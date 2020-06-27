@@ -9,13 +9,12 @@ import pkg_resources
 
 from pytest_web_ui import runner
 from pytest_web_ui import result_tree
+from pytest_web_ui import environment
 
 LOGGER = logging.getLogger(__name__)
 
 
-def build_app(
-    directory: str, use_docker: bool,
-) -> Tuple[flask.Flask, flask_socketio.SocketIO, runner.EnvironmentManager]:
+def build_app(directory: str) -> Tuple[flask.Flask, flask_socketio.SocketIO]:
     """Build a Flask app to serve the API and static files."""
     build_dir = pkg_resources.resource_filename(__name__, "web_client/build")
     LOGGER.debug("build_dir: %s", build_dir)
@@ -25,7 +24,7 @@ def build_app(
     app = flask.Flask(__name__, root_path=build_dir, static_folder=static_dir)
     branch_schema = result_tree.BranchNodeSchema()
     socketio = flask_socketio.SocketIO(app)
-    test_runner = runner.PyTestRunner(directory, socketio, use_docker)
+    test_runner = runner.PyTestRunner(directory, socketio)
 
     @app.route("/")
     def index():
@@ -53,4 +52,4 @@ def build_app(
     def disconnect():
         LOGGER.debug("Client disconnected")
 
-    return app, socketio, test_runner.environment
+    return app, socketio

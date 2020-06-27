@@ -13,7 +13,7 @@ from pytest_web_ui import result_tree
 def pyrunner():
     directory = os.path.join(os.path.dirname(__file__), os.pardir, "pytest_examples")
     socketio = mock.MagicMock()
-    return runner.PyTestRunner(directory, socketio, use_docker=False)
+    return runner.PyTestRunner(directory, socketio)
 
 
 def test_init(pyrunner):

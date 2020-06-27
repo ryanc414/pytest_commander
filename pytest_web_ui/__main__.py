@@ -25,15 +25,14 @@ def main():
     log_level = logging.DEBUG if args.debug else logging.CRITICAL
     logging.basicConfig(level=log_level)
 
-    app, socketio, environment = api.build_app(args.directory, not args.no_docker)
+    app, socketio = api.build_app(args.directory)
     address = f"http://{display_host(args.host)}:{args.port}/"
     LOGGER.critical(f"View in your browser at {address}")
 
     if not args.no_browse:
         threading.Thread(target=open_webbrowser, args=(address,)).start()
 
-    with environment:
-        socketio.run(app, host=args.host, port=args.port, debug=args.debug)
+    socketio.run(app, host=args.host, port=args.port, debug=args.debug)
 
 
 def display_host(host: str) -> str:
@@ -73,11 +72,6 @@ def parse_args() -> argparse.Namespace:
         "--no-browse",
         action="store_true",
         help="Do not automatically open a web browser to view the UI",
-    )
-    parser.add_argument(
-        "--no-docker",
-        action="store_true",
-        help="Do not automatically start docker services",
     )
 
     return parser.parse_args()

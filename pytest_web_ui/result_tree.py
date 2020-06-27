@@ -15,6 +15,8 @@ from marshmallow import fields
 import marshmallow_enum  # type: ignore
 from _pytest import nodes  # type: ignore
 
+from pytest_web_ui import environment
+
 
 class TestState(enum.Enum):
     """Possible states of a tree node."""
@@ -104,7 +106,11 @@ class BranchNode(Node):
     """
 
     def __init__(
-        self, nodeid: str, fspath: str, short_id: Optional[str] = None,
+        self,
+        nodeid: str,
+        fspath: str,
+        short_id: Optional[str] = None,
+        env: Optional[environment.EnvironmentManager] = None,
     ):
         self._nodeid = nodeid
         self._fspath = fspath
@@ -112,7 +118,7 @@ class BranchNode(Node):
         self.child_branches: Dict[str, BranchNode] = {}
         self.child_leaves: Dict[str, LeafNode] = {}
         self.parent_ids: List[str] = []
-        self.environment = None
+        self.environment = env
 
     def __eq__(self, other: object) -> bool:
         """Compare two BranchNodes for equality."""
@@ -139,6 +145,10 @@ class BranchNode(Node):
             yield branch
         for leaf in self.child_leaves.values():
             yield leaf
+
+    @property
+    def environment_state(self):
+        return self.environment.state
 
     @property
     def nodeid(self) -> str:
@@ -341,6 +351,7 @@ class BranchNodeSchema(NodeSchema):
         fields.Str(), fields.Nested(lambda: BranchNodeSchema())
     )
     child_leaves = fields.Dict(fields.Str(), fields.Nested(LeafNodeSchema()))
+    environment_state = fields.Str()
 
 
 def serialize_parents_slice(
