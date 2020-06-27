@@ -1,5 +1,6 @@
 """PyTestRunner class and related functions."""
 from concurrent import futures
+import contextlib
 import enum
 import logging
 import os
@@ -35,6 +36,14 @@ class PyTestRunner:
         self._socketio = socketio
         self._branch_schema = result_tree.BranchNodeSchema()
         self._leaf_schema = result_tree.LeafNodeSchema()
+
+    @contextlib.contextmanager
+    def environment_manager(self):
+        """
+        Context manager to ensure all test environments are closed on shutdown.
+        """
+        yield
+        _stop_all_environments(self.result_tree)
 
     def run_tests(self, nodeid: str):
         """
@@ -171,6 +180,18 @@ def _init_result_tree_recur(
                 nodes_index.update(index)
 
     return root_node, nodes_index
+
+
+def _stop_all_environments(node: result_tree.BranchNode):
+    """Stop all environments recursively from root node downwards."""
+    if node.environment is None:
+        return
+
+    if node.environment.state == environment.EnvironmentState.STARTED:
+        node.environment.stop()
+
+    for child_node in node.child_branches.values():
+        _stop_all_environments(child_node)
 
 
 class CollectPlugin:

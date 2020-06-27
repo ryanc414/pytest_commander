@@ -16,7 +16,7 @@ EXAMPLES_DIR = os.path.relpath(
 @pytest.fixture
 def clients():
     """Setup and yield flask and socketIO test clients."""
-    app, socketio = api.build_app(EXAMPLES_DIR)
+    app, socketio, _ = api.build_app(EXAMPLES_DIR)
     app.config["TESTING"] = True
     with app.test_client() as client:
         socket_client = socketio.test_client(app, flask_test_client=client)

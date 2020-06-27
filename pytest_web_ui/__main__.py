@@ -25,14 +25,15 @@ def main():
     log_level = logging.DEBUG if args.debug else logging.CRITICAL
     logging.basicConfig(level=log_level)
 
-    app, socketio = api.build_app(args.directory)
+    app, socketio, test_runner = api.build_app(args.directory)
     address = f"http://{display_host(args.host)}:{args.port}/"
     LOGGER.critical(f"View in your browser at {address}")
 
     if not args.no_browse:
         threading.Thread(target=open_webbrowser, args=(address,)).start()
 
-    socketio.run(app, host=args.host, port=args.port, debug=args.debug)
+    with test_runner.environment_manager():
+        socketio.run(app, host=args.host, port=args.port, debug=args.debug)
 
 
 def display_host(host: str) -> str:

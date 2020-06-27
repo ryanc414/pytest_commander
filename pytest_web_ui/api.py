@@ -14,7 +14,9 @@ from pytest_web_ui import environment
 LOGGER = logging.getLogger(__name__)
 
 
-def build_app(directory: str) -> Tuple[flask.Flask, flask_socketio.SocketIO]:
+def build_app(
+    directory: str,
+) -> Tuple[flask.Flask, flask_socketio.SocketIO, runner.PyTestRunner]:
     """Build a Flask app to serve the API and static files."""
     build_dir = pkg_resources.resource_filename(__name__, "web_client/build")
     LOGGER.debug("build_dir: %s", build_dir)
@@ -62,4 +64,4 @@ def build_app(directory: str) -> Tuple[flask.Flask, flask_socketio.SocketIO]:
     def disconnect():
         LOGGER.debug("Client disconnected")
 
-    return app, socketio
+    return app, socketio, test_runner
