@@ -18,6 +18,7 @@
               "status": "init"
             }
           },
+          "environment_state": "inactive",
           "nodeid": "pytest_examples/test_a.py::TestSuite",
           "short_id": "TestSuite",
           "status": "init"
@@ -37,6 +38,7 @@
           "status": "init"
         }
       },
+      "environment_state": "inactive",
       "nodeid": "pytest_examples/test_a.py",
       "short_id": "test_a.py",
       "status": "init"
@@ -63,13 +65,14 @@
           "status": "init"
         }
       },
+      "environment_state": "inactive",
       "nodeid": "pytest_examples/test_b.py",
       "short_id": "test_b.py",
       "status": "init"
     }
   },
   "child_leaves": {},
-  "environment_state": "EnvironmentState.STOPPED",
+  "environment_state": "stopped",
   "nodeid": "pytest_examples",
   "short_id": "pytest_examples",
   "status": "init"
