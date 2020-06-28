@@ -1,7 +1,7 @@
 /**
  * Global constants and type declarations.
  *
- * Commented out until used. 
+ * Commented out until used.
  */
 
 //const GREEN = '#228F1D';
@@ -21,6 +21,7 @@ export interface BranchNode {
   parent_ids: Array<string>,
   child_branches: { [key: string]: BranchNode },
   child_leaves: { [key: string]: LeafNode },
+  environment_state: string,
 }
 
 export interface LeafNode {

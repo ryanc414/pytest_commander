@@ -148,6 +148,9 @@ class BranchNode(Node):
 
     @property
     def environment_state(self):
+        if self.environment is None:
+            return environment.EnvironmentState.INACTIVE
+
         return self.environment.state
 
     @property
@@ -351,7 +354,9 @@ class BranchNodeSchema(NodeSchema):
         fields.Str(), fields.Nested(lambda: BranchNodeSchema())
     )
     child_leaves = fields.Dict(fields.Str(), fields.Nested(LeafNodeSchema()))
-    environment_state = fields.Str()
+    environment_state = marshmallow_enum.EnumField(
+        environment.EnvironmentState, by_value=True
+    )
 
 
 def serialize_parents_slice(

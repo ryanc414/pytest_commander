@@ -6,7 +6,7 @@ import React from 'react';
 import _ from 'lodash';
 import { ListGroup, ListGroupItem } from 'reactstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlay, faRedo } from '@fortawesome/free-solid-svg-icons';
+import { faPlay, faRedo, faToggleOn, faToggleOff } from '@fortawesome/free-solid-svg-icons';
 import { Link } from "react-router-dom";
 import { StyleSheet, css } from "aphrodite";
 
@@ -91,11 +91,14 @@ const NavBranchEntries = (props: NavBranchEntriesProps) => {
                     {short_id}
                   </Link>
                 </span>
-                <NavEntryIcon
-                  nodeid={childNode.nodeid}
-                  status={childNode.status}
-                  handleTestRun={props.handleTestRun}
-                />
+                <span className={css(styles.buttonsContainer, styles.navEntryCommon)}>
+                  <EnvironmentIcon envStatus={childNode.environment_state} />
+                  <NavEntryIcon
+                    nodeid={childNode.nodeid}
+                    status={childNode.status}
+                    handleTestRun={props.handleTestRun}
+                  />
+                </span>
               </ListGroupItem>
             );
           }
@@ -174,6 +177,8 @@ const NavEntryIcon = (props: NavEntryIconProps) => {
       return (
         <FontAwesomeIcon
           icon={faRedo}
+          className={css(styles.inactiveButton)}
+          size="lg"
           spin
         />
       );
@@ -187,8 +192,43 @@ const NavEntryIcon = (props: NavEntryIconProps) => {
             props.handleTestRun(props.nodeid);
           }}
           className={css(styles.runButton)}
+          size="lg"
         />
       );
+  }
+};
+
+const EnvironmentIcon: React.FunctionComponent<{envStatus: string}> = (props)=> {
+  switch (props.envStatus) {
+    case "stopped":
+      return (
+        <FontAwesomeIcon
+          icon={faToggleOff}
+          className={css(styles.runButton)}
+          size="lg"
+        />
+      );
+
+    case "started":
+      return (
+        <FontAwesomeIcon
+          icon={faToggleOn}
+          className={css(styles.runButton)}
+          size="lg"
+        />
+      );
+
+    case "inactive":
+      return (
+        <FontAwesomeIcon
+          icon={faToggleOff}
+          className={css(styles.inactiveButton)}
+          size="lg"
+        />
+      );
+
+    default:
+      throw new Error("unexpected environment status " + props.envStatus);
   }
 };
 
@@ -210,6 +250,9 @@ const getNavEntryStyle = (status: string) => {
 }
 
 const styles = StyleSheet.create({
+  buttonsContainer: {
+    width: "3em"
+  },
   navColumn: {
     height: "100%",
     width: COLWIDTH,
@@ -218,22 +261,29 @@ const styles = StyleSheet.create({
     "top": 0,
     "left": 0,
     "overflow-x": "hidden",
-    padding: "20px",
+    padding: "1px",
     background: LIGHT_GREY,
   },
   navLabel: {
     "text-overflow": "ellipsis",
     "white-space": "nowrap",
     fontSize: "small",
-    "max-width": "90%",
+    "max-width": "80%",
   },
   runButton: {
     cursor: 'pointer',
     color: 'black',
+    'padding-left': '3px',
+    'padding-right': '3px',
     transition: 'color 0.3s ease-out 0s',
     ':hover': {
-      color: LIGHT_GREY
+      color: LIGHT_GREY,
     }
+  },
+  inactiveButton: {
+    color: LIGHT_GREY,
+    'padding-left': '3px',
+    'padding-right': '3px',
   },
   navEntryPassed: { background: "#c0ffbf" },
   navEntryFailed: { background: "#ff7a7a" },
