@@ -18,6 +18,7 @@ interface NavColumnProps {
   selectedLeafID: string | null,
   selection: Array<string>,
   handleTestRun: (nodeid: string) => void,
+  handleEnvToggle: (nodeid: string, start: boolean) => void,
 }
 
 /**
@@ -36,6 +37,7 @@ export const NavColumn = (props: NavColumnProps) => {
           childBranches={props.childBranches}
           selection={props.selection}
           handleTestRun={props.handleTestRun}
+          handleEnvToggle={props.handleEnvToggle}
         />
         <NavLeafEntries
           childLeaves={props.childLeaves}
@@ -51,6 +53,7 @@ interface NavBranchEntriesProps {
   childBranches: { [key: string]: BranchNode },
   selection: Array<string>,
   handleTestRun: (nodeid: string) => void,
+  handleEnvToggle: (nodeid: string, start: boolean) => void,
 }
 
 /**
@@ -91,7 +94,11 @@ const NavBranchEntries = (props: NavBranchEntriesProps) => {
                     {short_id}
                   </Link>
                 </span>
-                <BranchEntryButtons node={childNode} handleTestRun={props.handleTestRun} />
+                <BranchEntryButtons
+                  node={childNode}
+                  handleTestRun={props.handleTestRun}
+                  handleEnvToggle={props.handleEnvToggle}
+                />
               </ListGroupItem>
             );
           }
@@ -104,6 +111,7 @@ const NavBranchEntries = (props: NavBranchEntriesProps) => {
 interface BranchEntryButtonsProps {
   node: BranchNode,
   handleTestRun: (nodeid: string) => void,
+  handleEnvToggle: (nodeid: string, start: boolean) => void,
 }
 
 const BranchEntryButtons: React.FunctionComponent<BranchEntryButtonsProps> = props => {
@@ -119,7 +127,11 @@ const BranchEntryButtons: React.FunctionComponent<BranchEntryButtonsProps> = pro
 
   return (
     <span className={css(styles.buttonsContainer, styles.navEntryCommon)}>
-      <EnvironmentIcon envStatus={props.node.environment_state} />
+      <EnvironmentIcon
+        envStatus={props.node.environment_state}
+        handleEnvToggle={props.handleEnvToggle}
+        nodeid={props.node.nodeid}
+      />
       <NavEntryIcon
         nodeid={props.node.nodeid}
         status={props.node.status}
@@ -219,13 +231,23 @@ const NavEntryIcon = (props: NavEntryIconProps) => {
   }
 };
 
-const EnvironmentIcon: React.FunctionComponent<{envStatus: string}> = (props)=> {
+interface EnvironmentIconProps {
+  envStatus: string,
+  nodeid: string,
+  handleEnvToggle: (nodeid: string, start: boolean) => void,
+}
+
+const EnvironmentIcon: React.FunctionComponent<EnvironmentIconProps> = (props)=> {
   switch (props.envStatus) {
     case "stopped":
       return (
         <FontAwesomeIcon
           icon={faToggleOff}
           className={css(styles.runButton)}
+          onClick={(e: React.MouseEvent) => {
+            e.stopPropagation();
+            props.handleEnvToggle(props.nodeid, true);
+          }}
           size="lg"
         />
       );
@@ -235,6 +257,10 @@ const EnvironmentIcon: React.FunctionComponent<{envStatus: string}> = (props)=> 
         <FontAwesomeIcon
           icon={faToggleOn}
           className={css(styles.runButton)}
+          onClick={(e: React.MouseEvent) => {
+            e.stopPropagation();
+            props.handleEnvToggle(props.nodeid, false);
+          }}
           size="lg"
         />
       );

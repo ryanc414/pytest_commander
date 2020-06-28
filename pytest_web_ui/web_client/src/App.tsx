@@ -52,6 +52,7 @@ class TestRunner extends React.Component<TestRunnerProps, TestRunnerState> {
     }
     this.handleUpdate = this.handleUpdate.bind(this);
     this.handleTestRun = this.handleTestRun.bind(this);
+    this.handleEnvToggle = this.handleEnvToggle.bind(this);
   }
 
   /**
@@ -111,6 +112,22 @@ class TestRunner extends React.Component<TestRunnerProps, TestRunnerState> {
   }
 
   /**
+   * Run a test after its run button has been clicked.
+   * @param short_id ID of node to run
+   */
+  handleEnvToggle(nodeid: string, start: boolean) {
+    if (!this.state.socket) {
+      console.log("Socket connection not yet established");
+      return;
+    }
+    if (start) {
+      this.state.socket.emit("start env", nodeid);
+    } else {
+      this.state.socket.emit("stop env", nodeid);
+    }
+  }
+
+  /**
    * Render the test runner UI. Currently this component acts as the stateful
    * store and hands off rendering logic to a separate stateless component.
    */
@@ -142,6 +159,7 @@ class TestRunner extends React.Component<TestRunnerProps, TestRunnerState> {
           childLeaves={childLeaves}
           selection={selection}
           handleTestRun={this.handleTestRun}
+          handleEnvToggle={this.handleEnvToggle}
         />
       );
     } catch (error) {
@@ -189,6 +207,7 @@ interface TestRunnerDisplayProps {
   childLeaves: { [key: string]: LeafNode },
   selection: Array<string>,
   handleTestRun: (short_id: string) => void,
+  handleEnvToggle: (nodeid: string, start: boolean) => void,
 }
 
 /**
@@ -209,6 +228,7 @@ const TestRunnerDisplay = (props: TestRunnerDisplayProps) => {
         selectedLeafID={selectedLeafID}
         selection={props.selection}
         handleTestRun={props.handleTestRun}
+        handleEnvToggle={props.handleEnvToggle}
       />
       <div className={css(styles.centrePane)}>
         <NavBreadcrumbs selection={props.selection} />
@@ -234,6 +254,7 @@ const MessageDisplay = (props: MessageDisplayProps) => (
       selectedLeafID={null}
       selection={[]}
       handleTestRun={(nodeid: string) => undefined}
+      handleEnvToggle={(nodeid: string, start: boolean) => undefined}
     />
     <div className={css(styles.centrePane)}>
       <NavBreadcrumbs selection={props.selection} />
