@@ -91,20 +91,41 @@ const NavBranchEntries = (props: NavBranchEntriesProps) => {
                     {short_id}
                   </Link>
                 </span>
-                <span className={css(styles.buttonsContainer, styles.navEntryCommon)}>
-                  <EnvironmentIcon envStatus={childNode.environment_state} />
-                  <NavEntryIcon
-                    nodeid={childNode.nodeid}
-                    status={childNode.status}
-                    handleTestRun={props.handleTestRun}
-                  />
-                </span>
+                <BranchEntryButtons node={childNode} handleTestRun={props.handleTestRun} />
               </ListGroupItem>
             );
           }
         )
       }
     </>
+  );
+};
+
+interface BranchEntryButtonsProps {
+  node: BranchNode,
+  handleTestRun: (nodeid: string) => void,
+}
+
+const BranchEntryButtons: React.FunctionComponent<BranchEntryButtonsProps> = props => {
+  if (props.node.environment_state == "inactive") {
+    return (
+      <NavEntryIcon
+        nodeid={props.node.nodeid}
+        status={props.node.status}
+        handleTestRun={props.handleTestRun}
+      />
+    );
+  }
+
+  return (
+    <span className={css(styles.buttonsContainer, styles.navEntryCommon)}>
+      <EnvironmentIcon envStatus={props.node.environment_state} />
+      <NavEntryIcon
+        nodeid={props.node.nodeid}
+        status={props.node.status}
+        handleTestRun={props.handleTestRun}
+      />
+    </span>
   );
 };
 
@@ -214,15 +235,6 @@ const EnvironmentIcon: React.FunctionComponent<{envStatus: string}> = (props)=> 
         <FontAwesomeIcon
           icon={faToggleOn}
           className={css(styles.runButton)}
-          size="lg"
-        />
-      );
-
-    case "inactive":
-      return (
-        <FontAwesomeIcon
-          icon={faToggleOff}
-          className={css(styles.inactiveButton)}
           size="lg"
         />
       );
