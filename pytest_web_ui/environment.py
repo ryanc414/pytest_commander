@@ -10,6 +10,7 @@ class EnvironmentState(enum.Enum):
     INACTIVE = "inactive"
     STOPPED = "stopped"
     STARTED = "started"
+    STOPPING = "stopping"
 
 
 class EnvironmentStateError(RuntimeError):
@@ -42,7 +43,7 @@ class EnvironmentManager:
         return self
 
     def stop(self):
-        if self.state != EnvironmentState.STARTED:
+        if self.state != EnvironmentState.STOPPING:
             raise EnvironmentStateError(self.state, EnvironmentState.STOPPED)
 
         subprocess.check_call(["docker-compose", "-f", self._compose_path, "down"])

@@ -265,6 +265,15 @@ const EnvironmentIcon: React.FunctionComponent<EnvironmentIconProps> = (props)=>
         />
       );
 
+    case "stopping":
+      return (
+        <FontAwesomeIcon
+          icon={faToggleOn}
+          className={css(styles.inactiveButton)}
+          size="lg"
+        />
+      );
+
     default:
       throw new Error("unexpected environment status " + props.envStatus);
   }

@@ -81,8 +81,9 @@ def test_environment(mock_popen, mock_check_call, clients):
     )
 
     socket_client.emit("stop env", EXAMPLES_DIR)
-    rcvd = socket_client.get_received()
-    assert len(rcvd) == 1
+    rcvd = []
+    while len(rcvd) < 2:
+        rcvd.extend(socket_client.get_received())
     mock_check_call.assert_called_once_with(
         ["docker-compose", "-f", "pytest_examples/docker_compose.yml", "down"]
     )

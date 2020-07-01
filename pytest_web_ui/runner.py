@@ -74,6 +74,12 @@ class PyTestRunner:
         node = self._result_index[nodeid]
         if not isinstance(node, result_tree.BranchNode) or node.environment is None:
             raise ValueError(f"cannot start environment for node {nodeid}")
+        node.environment.state = environment.EnvironmentState.STOPPING
+        self._send_update(node)
+        self._socketio.start_background_task(self._stop_env, node)
+
+    def _stop_env(self, node: result_tree.BranchNode):
+        assert node.environment is not None
         node.environment.stop()
         self._send_update(node)
 
