@@ -194,6 +194,7 @@ def _stop_all_environments(node: result_tree.BranchNode):
         return
 
     if node.environment.state == environment.EnvironmentState.STARTED:
+        node.environment.state = environment.EnvironmentState.STOPPING
         node.environment.stop()
 
     for child_node in node.child_branches.values():

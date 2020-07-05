@@ -15,7 +15,7 @@ def test_two():
 @pytest.fixture
 def http_server():
     """Await the HTTP server to be ready."""
-    for i in range(100):
+    for i in range(1000):
         rsp = requests.get("http://localhost:5678")
         if rsp.status_code == 200:
             break
