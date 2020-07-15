@@ -23,7 +23,7 @@ class EnvironmentStateError(RuntimeError):
 
 class EnvironmentManager:
 
-    COMPOSE_FILENAME = "docker_compose.yml"
+    COMPOSE_FILENAME = "docker-compose.yml"
 
     def __init__(self, directory: str):
         self._compose_path = os.path.join(directory, self.COMPOSE_FILENAME)
