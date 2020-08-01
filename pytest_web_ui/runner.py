@@ -150,6 +150,8 @@ def _init_result_tree(
 ) -> Tuple[result_tree.BranchNode, Dict[str, result_tree.Node]]:
     """Collect the tests and initialise the result tree skeleton."""
     node, index = _init_result_tree_recur(directory)
+    if len(node.child_branches) == 0 and len(node.child_leaves) == 0:
+        raise RuntimeError(f"failed to collect any tests from {directory}")
     for child_branch in node.child_branches.values():
         result_tree.set_parent_ids(child_branch)
     return node, index
@@ -172,7 +174,8 @@ def _init_result_tree_recur(
                 plugin = CollectPlugin()
                 ret = pytest.main(["--collect-only", entry.path], plugins=[plugin])
                 if ret != 0:
-                    raise RuntimeError(f"Failed to collect tests from {entry.path}")
+                    LOGGER.warning("failed to collect tests from %s", entry.path)
+                    continue
 
                 session = plugin.session
                 node, index = result_tree.build_from_session(session, entry.path)
