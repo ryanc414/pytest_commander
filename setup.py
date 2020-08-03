@@ -27,8 +27,8 @@ def main():
             "marshmallow>=3.0.0",
             "marshmallow-enum",
             "flask>=1.0",
-            "flask-socketio>=4.0.0",
             "eventlet",
+            "requests",
         ],
         include_package_data=True,
         entry_points={

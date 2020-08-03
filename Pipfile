@@ -5,22 +5,15 @@ verify_ssl = true
 
 [dev-packages]
 black = "*"
-pytest-runner = {editable = true,path = "."}
 mypy = "*"
 pylint = "*"
 twine = "*"
-
-[packages]
-pytest = "*"
-flask = "*"
-marshmallow = "*"
-flask-socketio = "*"
-eventlet = "*"
-marshmallow-enum = "*"
-requests = "*"
 
 [requires]
 python_version = "3.8"
 
 [pipenv]
 allow_prereleases = true
+
+[packages]
+pytest-web-ui = {editable = true,path = "."}
