@@ -8,7 +8,7 @@ def main():
 
     setuptools.setup(
         name="pytest_web_ui",
-        version="1.3.0",
+        version="1.3.1",
         author="Ryan Collingham",
         author_email="ryanc118@gmail.com",
         description="An interactive web UI test runner for PyTest",
