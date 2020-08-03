@@ -115,7 +115,7 @@ interface BranchEntryButtonsProps {
 }
 
 const BranchEntryButtons: React.FunctionComponent<BranchEntryButtonsProps> = props => {
-  if (props.node.environment_state == "inactive") {
+  if (props.node.environment_state === "inactive") {
     return (
       <NavEntryIcon
         nodeid={props.node.nodeid}
