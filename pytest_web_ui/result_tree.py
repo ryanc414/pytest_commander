@@ -185,8 +185,8 @@ class LeafNode(Node):
     as such, represents a test function or method.
     """
 
-    def __init__(self, item: nodes.Item):
-        self._pytest_node = item
+    def __init__(self, nodeid: str):
+        self._nodeid = nodeid
         self.report = None
         self._status = TestState.INIT
         self.parent_ids: List[str] = []
@@ -200,11 +200,11 @@ class LeafNode(Node):
 
     def __repr__(self) -> str:
         """String representation of this node."""
-        return f"LeafNode <{self._pytest_node} {self.status}>"
+        return f"LeafNode <{self.nodeid} {self.status}>"
 
     @property
     def nodeid(self) -> str:
-        return self._pytest_node.nodeid
+        return self._nodeid
 
     @property
     def short_id(self) -> str:
@@ -255,7 +255,7 @@ def build_from_session(
     for item in session.items:
         collectors = item.listchain()[1:-1]
         branch = _ensure_branch(root, collectors)
-        leaf = LeafNode(item)
+        leaf = LeafNode(item.nodeid)
         branch.child_leaves[leaf.short_id] = leaf
 
     pruned_tree = _prune_tree(root)
