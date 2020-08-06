@@ -58,21 +58,22 @@ class Node(abc.ABC):
         self._short_id = None
 
     @property
-    @abc.abstractmethod
-    def nodeid(self) -> str:
-        """Return the unique ID for this node."""
-        raise NotImplementedError
-
-    @property
-    @abc.abstractmethod
     def short_id(self) -> str:
-        """Return the short ID for this node."""
-        raise NotImplementedError
+        """Short ID."""
+        if self._short_id:
+            return self._short_id
+        return self.nodeid.split("::")[-1].split("/")[-1]
 
     @property
     def status(self) -> TestState:
         """Property getter for current status."""
         return self._get_status()
+
+    @property
+    @abc.abstractmethod
+    def nodeid(self) -> str:
+        """Return the unique ID for this node."""
+        raise NotImplementedError
 
     @status.setter
     def status(self, new_status: TestState):
@@ -159,13 +160,6 @@ class BranchNode(Node):
         return self._nodeid
 
     @property
-    def short_id(self) -> str:
-        """Short ID."""
-        if self._short_id:
-            return self._short_id
-        return self.nodeid.split("::")[-1].split("/")[-1]
-
-    @property
     def fspath(self) -> str:
         """Filesystem path this test node corresponds to."""
         return self._fspath
@@ -187,6 +181,7 @@ class LeafNode(Node):
 
     def __init__(self, nodeid: str):
         self._nodeid = nodeid
+        self._short_id = None
         self.report = None
         self._status = TestState.INIT
         self.parent_ids: List[str] = []
@@ -205,11 +200,6 @@ class LeafNode(Node):
     @property
     def nodeid(self) -> str:
         return self._nodeid
-
-    @property
-    def short_id(self) -> str:
-        """Short ID."""
-        return self.nodeid.split("::")[-1]
 
     @property
     def longrepr(self) -> Optional[str]:

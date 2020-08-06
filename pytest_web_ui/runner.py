@@ -84,7 +84,7 @@ class PyTestRunner:
         self._send_update(node)
 
     def _run_test(self, nodeid: str):
-        result_queue: "multiprocessing.Queue[Union[reports.TestReport, int]]" = multiprocessing.Queue()
+        result_queue: "multiprocessing.Queue[Union[reports.BaseReport, int]]" = multiprocessing.Queue()
         proc = multiprocessing.context.SpawnContext.Process(
             target=_run_test,
             args=(nodeid, result_queue, self.result_tree.fspath, self._directory),
@@ -105,8 +105,23 @@ class PyTestRunner:
     def _add_test_report(self, report: reports.TestReport):
         """Add a test report into our result tree."""
         result_node = self._result_index[report.nodeid]
-        assert isinstance(result_node, result_tree.LeafNode)
-        result_node.report = report
+        if isinstance(result_node, result_tree.LeafNode):
+            result_node.report = report
+        else:
+            assert isinstance(result_node, result_tree.BranchNode)
+            new_node = result_tree.LeafNode(nodeid=result_node.nodeid)
+            new_node.parent_ids = result_node.parent_ids
+            new_node.report = report
+            parent_node = self._get_parent_node(result_node)
+            del parent_node.child_branches[result_node.short_id]
+            parent_node.child_leaves[result_node.short_id] = new_node
+            self._result_index[new_node.nodeid] = new_node
+
+    def _get_parent_node(self, node: result_tree.LeafNode):
+        parent_node = self.result_tree
+        for id in node.parent_ids:
+            parent_node = parent_node.child_branches[id]
+        return parent_node
 
     def _send_update(self, updated_node: result_tree.Node):
         if updated_node.nodeid == self.result_tree.nodeid:
@@ -220,7 +235,12 @@ class TestRunPlugin:
     def __init__(self, queue=multiprocessing.Queue):
         self._queue = queue
 
-    def pytest_runtest_logreport(self, report):
+    def pytest_collectreport(self, report: reports.CollectReport):
+        """Hook called after a test has been collected."""
+        if report.outcome != "passed":
+            self._queue.put(report)
+
+    def pytest_runtest_logreport(self, report: reports.TestReport):
         """
         Hook called after a new test report is ready. Also called for
         setup/teardown.
