@@ -52,7 +52,7 @@ class PyTestRunner:
         """
         result_node = self._result_index[nodeid]
         result_node.status = result_tree.TestState.RUNNING
-        self._send_update(result_node)
+        self._send_update()
         self._socketio.start_background_task(self._run_test, nodeid)
 
     def start_env(self, nodeid: str):
@@ -64,7 +64,7 @@ class PyTestRunner:
         if not isinstance(node, result_tree.BranchNode) or node.environment is None:
             raise ValueError(f"cannot start environment for node {nodeid}")
         node.environment.start()
-        self._send_update(node)
+        self._send_update()
 
     def stop_env(self, nodeid: str):
         """
@@ -75,13 +75,13 @@ class PyTestRunner:
         if not isinstance(node, result_tree.BranchNode) or node.environment is None:
             raise ValueError(f"cannot start environment for node {nodeid}")
         node.environment.state = environment.EnvironmentState.STOPPING
-        self._send_update(node)
+        self._send_update()
         self._socketio.start_background_task(self._stop_env, node)
 
     def _stop_env(self, node: result_tree.BranchNode):
         assert node.environment is not None
         node.environment.stop()
-        self._send_update(node)
+        self._send_update()
 
     def _run_test(self, nodeid: str):
         result_queue: "multiprocessing.Queue[Union[reports.BaseReport, int]]" = multiprocessing.Queue()
@@ -96,19 +96,18 @@ class PyTestRunner:
                 val = result_queue.get_nowait()
                 if val == _DONE:
                     break
-                self._add_test_report(val)
+                self._add_report(val)
             except queue.Empty:
                 eventlet.sleep(self._ACTIVE_LOOP_SLEEP)
 
-        self._send_update(self._result_index[nodeid])
+        self._send_update()
 
-    def _add_test_report(self, report: reports.TestReport):
-        """Add a test report into our result tree."""
-        result_node = self._result_index[report.nodeid]
+    def _add_report(self, report: reports.BaseReport):
+        """Add a report into our result tree."""
+        result_node = self._result_index.get(report.nodeid)
         if isinstance(result_node, result_tree.LeafNode):
             result_node.report = report
         else:
-            assert isinstance(result_node, result_tree.BranchNode)
             new_node = result_tree.LeafNode(nodeid=result_node.nodeid)
             new_node.parent_ids = result_node.parent_ids
             new_node.report = report
@@ -123,27 +122,9 @@ class PyTestRunner:
             parent_node = parent_node.child_branches[id]
         return parent_node
 
-    def _send_update(self, updated_node: result_tree.Node):
-        if updated_node.nodeid == self.result_tree.nodeid:
-            parents_slice = self._branch_schema.dump(updated_node)
-        else:
-            parents_slice, parent_node = result_tree.serialize_parents_slice(
-                updated_node, self.result_tree
-            )
-
-            if isinstance(updated_node, result_tree.BranchNode):
-                serialized_result = self._branch_schema.dump(updated_node)
-                parent_node["child_branches"] = {
-                    updated_node.short_id: serialized_result
-                }
-            elif isinstance(updated_node, result_tree.LeafNode):
-                serialized_result = self._leaf_schema.dump(updated_node)
-                parent_node["child_leaves"] = {updated_node.short_id: serialized_result}
-            else:
-                raise TypeError(f"Unexpected node type: {type(updated_node)}")
-
-        LOGGER.debug("Sending update for nodeid %s", updated_node.nodeid)
-        self._socketio.emit("update", parents_slice)
+    def _send_update(self):
+        serialized_tree = self._branch_schema.dump(self.result_tree)
+        self._socketio.emit("update", serialized_tree)
 
 
 def _run_test(nodeid: str, queue: multiprocessing.Queue, root_dir: str, test_dir: str):

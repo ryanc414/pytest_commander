@@ -7,7 +7,6 @@ import {
   useLocation,
 } from "react-router-dom";
 import { StyleSheet, css } from "aphrodite";
-import _ from "lodash";
 
 import { COLWIDTH, BranchNode, LeafNode } from "./Common";
 import { NavColumn } from "./NavColumn";
@@ -84,19 +83,9 @@ class TestRunner extends React.Component<TestRunnerProps, TestRunnerState> {
    * Handle an update event received over a websocket.
    * @param data Update data received over socket
    */
-  handleUpdate(data: BranchNode) {
+  handleUpdate(tree: BranchNode) {
     console.log("Handling websocket update");
-    console.log(data);
-
-    const root = this.state.resultTree;
-    if (!root) {
-      return;
-    }
-
-    this.setState((state) => {
-      const newTree = updateResultTree(root, data);
-      return { resultTree: newTree };
-    });
+    this.setState({ resultTree: tree });
   }
 
   /**
@@ -187,19 +176,6 @@ const parseSelection = (url: string | null): Array<string> => {
   }
   const pathElements = trimmedPath.split("/");
   return pathElements.map(decodeURIComponent);
-};
-
-/**
- * Update a particular node in the result tree with new data.
- * @param currNode Existing in result tree to update
- * @param updateData Update data for new node
- */
-const updateResultTree = (
-  currRoot: BranchNode, updateData: BranchNode
-): BranchNode => {
-  const newRoot = { ...currRoot };
-  _.merge(newRoot, updateData);
-  return newRoot;
 };
 
 interface TestRunnerDisplayProps {

@@ -347,21 +347,3 @@ class BranchNodeSchema(NodeSchema):
     environment_state = marshmallow_enum.EnumField(
         environment.EnvironmentState, by_value=True
     )
-
-
-def serialize_parents_slice(
-    result_node: Node, result_tree: BranchNode,
-) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-    """Serialize a slice of the tree from root to the given result node."""
-    shallow_branch_schema = NodeSchema()
-    serialized_root = shallow_branch_schema._serialize(result_tree)
-    curr_serialized_node = serialized_root
-    curr_node = result_tree
-
-    for uid in result_node.parent_ids:
-        curr_node = curr_node.child_branches[uid]
-        serialized_child = shallow_branch_schema._serialize(curr_node)
-        curr_serialized_node["child_branches"] = {uid: serialized_child}
-        curr_serialized_node = serialized_child
-
-    return serialized_root, curr_serialized_node
