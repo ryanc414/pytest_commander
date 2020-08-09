@@ -108,8 +108,8 @@ class BranchNode(Node):
 
     def __init__(
         self,
-        nodeid: str,
-        fspath: str,
+        nodeid: str = "",
+        fspath: str = "",
         short_id: Optional[str] = None,
         env: Optional[environment.EnvironmentManager] = None,
     ):
@@ -159,10 +159,18 @@ class BranchNode(Node):
         """Unique ID of this node, used for indexing."""
         return self._nodeid
 
+    @nodeid.setter
+    def nodeid(self, nodeid: str):
+        self._nodeid = nodeid
+
     @property
     def fspath(self) -> str:
         """Filesystem path this test node corresponds to."""
         return self._fspath
+
+    @fspath.setter
+    def fspath(self, path: str):
+        self._fspath = path
 
     def _get_status(self) -> TestState:
         """Return status of child entries."""
@@ -182,9 +190,9 @@ class LeafNode(Node):
     def __init__(self, nodeid: str):
         self._nodeid = nodeid
         self._short_id = None
-        self.report = None
         self._status = TestState.INIT
         self.parent_ids: List[str] = []
+        self.longrepr = None
 
     def __eq__(self, other: object) -> bool:
         """Compare two LeafNodes for equality."""
@@ -201,13 +209,6 @@ class LeafNode(Node):
     def nodeid(self) -> str:
         return self._nodeid
 
-    @property
-    def longrepr(self) -> Optional[str]:
-        if self.report is None or self.report.longrepr is None:
-            return None
-
-        return str(self.report.longrepr)
-
     def pretty_format(self) -> str:
         """Output a pretty-formatted string of the whole tree, for debug purposes."""
         return str(self)
@@ -218,9 +219,7 @@ class LeafNode(Node):
         run and we get the status from the report. Otherwise, the status may be either
         INIT (not yet run) or RUNNING (in progress of being run).
         """
-        if self.report is None:
-            return self._status
-        return TestState(self.report.outcome)
+        return self._status
 
     def _set_status(self, new_status):
         """
@@ -228,21 +227,14 @@ class LeafNode(Node):
         reset the state to INIT. In either case, we reset the test report to None if
         present.
         """
-        if new_status not in (TestState.INIT, TestState.RUNNING):
-            raise ValueError("Invalid state")
         self._status = new_status
-        self.report = None
 
 
-def build_from_session(
-    session: nodes.Session, root_id: str
-) -> Tuple[BranchNode, Dict[str, Node]]:
+def build_from_items(items: List) -> Tuple[BranchNode, Dict[str, Node]]:
     """Build a result tree from the PyTest session object."""
-    root = BranchNode(
-        nodeid=session.nodeid, fspath=str(session.fspath), short_id=root_id
-    )
+    root = BranchNode()
 
-    for item in session.items:
+    for item in items:
         collectors = item.listchain()[1:-1]
         branch = _ensure_branch(root, collectors)
         leaf = LeafNode(item.nodeid)

@@ -7,20 +7,28 @@ import os
 import multiprocessing
 import queue
 import subprocess
-from typing import Tuple, Dict, Callable, List, Union
+from typing import Tuple, Dict, Callable, List, Union, Optional
 import pprint
+import collections
 
 import eventlet  # type: ignore
 import flask_socketio  # type: ignore
 
 import pytest  # type: ignore
 from _pytest import reports  # type: ignore
+from _pytest import nodes  # type: ignore
 
 from pytest_web_ui import result_tree
 from pytest_web_ui import environment
 
 LOGGER = logging.getLogger(__name__)
-_DONE = 0xDEAD
+_COLLECT_DONE = 0xDEAD
+_TEST_DONE = 0xBEEF
+
+
+CollectReport = collections.namedtuple(
+    "CollectReport", ["outcome", "longrepr", "collected_items", "failure_nodeid"]
+)
 
 
 class PyTestRunner:
@@ -50,9 +58,6 @@ class PyTestRunner:
         Run the test or tests for a given PyTest node. Updates the results tree with
         test reports as they are available.
         """
-        result_node = self._result_index[nodeid]
-        result_node.status = result_tree.TestState.RUNNING
-        self._send_update()
         self._socketio.start_background_task(self._run_test, nodeid)
 
     def start_env(self, nodeid: str):
@@ -85,28 +90,36 @@ class PyTestRunner:
 
     def _run_test(self, nodeid: str):
         result_queue: "multiprocessing.Queue[Union[reports.BaseReport, int]]" = multiprocessing.Queue()
-        proc = multiprocessing.context.SpawnContext.Process(
+        proc = multiprocessing.Process(
             target=_run_test,
-            args=(nodeid, result_queue, self.result_tree.fspath, self._directory),
+            args=(nodeid, result_queue, self.result_tree.fspath, self._directory,),
         )
         proc.start()
+
+        _ = result_queue.get()
 
         while True:
             try:
                 val = result_queue.get_nowait()
                 if val == _DONE:
                     break
-                self._add_report(val)
+                self._add_test_report(val)
             except queue.Empty:
                 eventlet.sleep(self._ACTIVE_LOOP_SLEEP)
 
         self._send_update()
 
-    def _add_report(self, report: reports.BaseReport):
+    def _add_test_report(self, report: reports.TestReport):
         """Add a report into our result tree."""
         result_node = self._result_index.get(report.nodeid)
-        if isinstance(result_node, result_tree.LeafNode):
-            result_node.report = report
+        assert isinstance(result_node, result_tree.LeafNode)
+        result_node.status = result_tree.TestState(report.outcome)
+        result_node.longrepr = report.longrepr
+
+    def _add_collect_report(self, report: reports.CollectReport):
+        result_node = self._result_index.get(report.nodeid)
+        if report.outcome == "passed":
+            result_node.status = result_tree.TestState.RUNNING
         else:
             new_node = result_tree.LeafNode(nodeid=result_node.nodeid)
             new_node.parent_ids = result_node.parent_ids
@@ -127,12 +140,26 @@ class PyTestRunner:
         self._socketio.emit("update", serialized_tree)
 
 
-def _run_test(nodeid: str, queue: multiprocessing.Queue, root_dir: str, test_dir: str):
+def _run_test(
+    nodeid: str,
+    mp_queue: "multiprocessing.Queue[Union[reports.BaseReport, int]]",
+    root_dir: str,
+    test_dir: str,
+):
     full_path = _get_full_path(nodeid, root_dir, test_dir)
     LOGGER.debug("full_path: %s", full_path)
-    plugin = TestRunPlugin(queue=queue)
-    pytest.main([full_path], plugins=[plugin])
-    queue.put(_DONE)
+
+    plugin = TestRunPlugin(queue=mp_queue)
+    pytest.main([full_path, "-s"], plugins=[plugin])
+    mp_queue.put(_DONE)
+
+
+def _listen_queue(queue, mp_queue):
+    while True:
+        item = queue.get()
+        mp_queue.put(item)
+        if item == _DONE:
+            return
 
 
 def _get_full_path(nodeid: str, root_dir: str, test_dir: str) -> str:
@@ -167,24 +194,79 @@ def _init_result_tree_recur(
     with os.scandir(directory) as it:
         for entry in it:
             if entry.is_file() and entry.name.endswith(".py"):
-                plugin = CollectPlugin()
-                ret = pytest.main(["--collect-only", entry.path], plugins=[plugin])
-                if ret != 0:
-                    LOGGER.warning("failed to collect tests from %s", entry.path)
-                    continue
-
-                session = plugin.session
-                node, index = result_tree.build_from_session(session, entry.path)
+                node, index = _collect_file(entry.path)
+                _collect_file(entry.path)
             elif entry.is_dir():
                 node, index = _init_result_tree_recur(entry.path)
             else:
                 continue
 
-            if list(node.iter_children()):
+            if isinstance(node, result_tree.LeafNode):
+                root_node.child_leaves[node.short_id] = node
+                nodes_index.update(index)
+            elif list(node.iter_children()):
                 root_node.child_branches[node.short_id] = node
                 nodes_index.update(index)
 
     return root_node, nodes_index
+
+
+def _collect_file(
+    filepath: str,
+) -> Tuple[result_tree.BranchNode, Dict[str, result_tree.Node]]:
+    reports_queue = queue.Queue()
+    plugin = ReporterPlugin(queue=reports_queue)
+    ret = pytest.main(["--collect-only", filepath], plugins=[plugin])
+    report = reports_queue.get()
+
+    if ret != 0:
+        LOGGER.warning("Failed to collect tests from %s", filepath)
+        node = result_tree.LeafNode(report.failure_nodeid)
+        node.status = result_tree.TestState(report.outcome)
+        node.longrepr = report.longrepr
+        return node, {node.nodeid: node}
+
+    return result_tree.build_from_items(report.collected_items)
+
+
+def _ensure_branch(
+    node: Optional[result_tree.BranchNode],
+    short_ids: List[str],
+    report: CollectReport,
+    index: Dict[str, result_tree.BranchNode],
+):
+    next_id, rest_ids = short_ids[0], short_ids[1:]
+    if node is None:
+        node = result_tree.BranchNode(short_id=next_id)
+
+    if rest_ids:
+        node.child_branches[rest_ids[0]], index = _ensure_branch(
+            node.child_branches.get(rest_ids[0]), rest_ids, report, index
+        )
+    else:
+        node.nodeid = report.nodeid
+        node.longrepr = report.longrepr
+        node.fspath = report.fspath
+        node.child_leaves = _init_child_leaves(report.result)
+        index[node.nodeid] = node
+
+    return node, index
+
+
+def _init_child_leaves(result):
+    child_leaves = {}
+    for res in result:
+        node = result_tree.LeafNode(res.nodeid)
+        child_leaves[node.short_id] = node
+    return child_leaves
+
+
+def _split_nodeid(nodeid: str) -> List[str]:
+    """
+    path/to/test.py::TestSuite::test_case -> [test.py, TestSuite, test_case]
+    """
+    paths = nodeid.split("::")
+    return [paths[0].split("/")[-1]] + paths[1:]
 
 
 def _stop_all_environments(node: result_tree.BranchNode):
@@ -200,26 +282,28 @@ def _stop_all_environments(node: result_tree.BranchNode):
         _stop_all_environments(child_node)
 
 
-class CollectPlugin:
-    """PyTest plugin used to retrieve session object after collection."""
-
-    def __init__(self):
-        self.session = None
-
-    def pytest_collection_finish(self, session):
-        self.session = session
-
-
-class TestRunPlugin:
+class ReporterPlugin:
     """PyTest plugin used to run tests and store results in our tree."""
 
-    def __init__(self, queue=multiprocessing.Queue):
+    def __init__(
+        self, queue: queue.Queue,
+    ):
         self._queue = queue
+        self._last_collectreport = None
 
     def pytest_collectreport(self, report: reports.CollectReport):
         """Hook called after a test has been collected."""
-        if report.outcome != "passed":
-            self._queue.put(report)
+        self._last_collectreport = report
+
+    def pytest_collection_finish(self, session: pytest.Session):
+        self._queue.put(
+            CollectReport(
+                outcome=self._last_collectreport.outcome,
+                longrepr=self._last_collectreport.longrepr,
+                failure_nodeid=self._last_collectreport.nodeid,
+                collected_items=session.items,
+            )
+        )
 
     def pytest_runtest_logreport(self, report: reports.TestReport):
         """
@@ -229,4 +313,11 @@ class TestRunPlugin:
         # Currently do nothing for setup/teardown.
         if report.when != "call":
             return
-        self._queue.put(report)
+        self._queue.put(
+            Report(
+                stage="runtest",
+                outcome=report.outcome,
+                longrepr=report.longrepr,
+                nodeid=report.nodeid,
+            )
+        )
