@@ -230,66 +230,62 @@ class LeafNode(Node):
         self._status = new_status
 
 
-def build_from_items(items: List) -> Tuple[BranchNode, Dict[str, Node]]:
+def build_from_items(
+    items: List, nodeid_prefix: str
+) -> Tuple[BranchNode, Dict[str, Node]]:
     """Build a result tree from the PyTest session object."""
-    root = BranchNode()
+    child_branches = {}
 
     for item in items:
-        collectors = item.listchain()[1:-1]
-        branch = _ensure_branch(root, collectors)
+        assert item.nodeid.startswith(nodeid_prefix)
+        relative_nodeid = item.nodeid[len(nodeid_prefix) + 1 :]
+        print(f"*** relative_nodeid: {relative_nodeid}")
+        nodeid_components = _split_nodeid(relative_nodeid)
+        print(f"*** nodeid components: {nodeid_components}")
+        branch = _ensure_branch(child_branches, nodeid_components, nodeid_prefix)
         leaf = LeafNode(item.nodeid)
         branch.child_leaves[leaf.short_id] = leaf
 
-    pruned_tree = _prune_tree(root)
-    if pruned_tree is None:
-        raise RuntimeError("No tests were found")
+    assert len(child_branches) == 1
+    root = next(iter(child_branches.values()))
 
-    nodes_index = _build_index(pruned_tree)
-    return pruned_tree, nodes_index
-
-
-def _prune_tree(node: BranchNode) -> Optional[BranchNode]:
-    """
-    Recursively remove all branch nodes from the tree that only have a single child,
-    instead directly linking to that child.
-    """
-    children = list(node.iter_children())
-    if not children:
-        return None
-    if len(children) == 1 and isinstance(children[0], BranchNode):
-        node = children[0]
-
-    child_branches = {
-        short_id: _prune_tree(child) for short_id, child in node.child_branches.items()
-    }
-    node.child_branches = {
-        short_id: child
-        for short_id, child in child_branches.items()
-        if child is not None
-    }
-    return node
+    nodes_index = _build_index(root)
+    return root, nodes_index
 
 
-def _ensure_branch(node: BranchNode, collectors: List[nodes.Collector],) -> BranchNode:
+def _split_nodeid(nodeid: str) -> List[str]:
+    components = nodeid.split("::")
+    return components[0].split("/") + components[1:]
+
+
+def _join_nodeid(components: List[str]) -> str:
+    return "".join(components)
+
+
+def _ensure_branch(
+    child_branches: Dict[str, BranchNode],
+    nodeid_components: List[str],
+    nodeid_prefix: str,
+) -> BranchNode:
     """
     Retrieve the branch node under the given root node that corresponds to the given
     chain of collectors. If any branch nodes do not yet exist, they will be
     automatically created.
     """
-    # Base recursive case: return the current node if the list of collectors is empty.
-    if not collectors:
-        return node
-
-    next_col, rest = collectors[0], collectors[1:]
-    short_id = next_col.nodeid.split("::")[-1]
-
+    next_component, rest_components = nodeid_components[0], nodeid_components[1:]
+    nodeid = nodeid_prefix + next_component
     try:
-        child = node.child_branches[short_id]
+        child = child_branches[next_component]
+        assert child.nodeid == nodeid
     except KeyError:
-        child = BranchNode(nodeid=next_col.nodeid, fspath=str(next_col.fspath))
-        node.child_branches[short_id] = child
+        child = BranchNode(nodeid=nodeid, short_id=next_component)
+        child_branches[next_component] = child
 
-    return _ensure_branch(child, rest)
+    if len(rest_components) > 1:
+        return _ensure_branch(child.child_branches, rest_components, nodeid)
+    else:
+        assert len(rest_components) == 1
+        return child
 
 
 def set_parent_ids(node: BranchNode):

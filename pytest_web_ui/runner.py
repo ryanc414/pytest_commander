@@ -194,7 +194,7 @@ def _init_result_tree_recur(
     with os.scandir(directory) as it:
         for entry in it:
             if entry.is_file() and entry.name.endswith(".py"):
-                node, index = _collect_file(entry.path)
+                node, index = _collect_file(entry.path, directory)
             elif entry.is_dir():
                 node, index = _init_result_tree_recur(entry.path)
             else:
@@ -211,10 +211,10 @@ def _init_result_tree_recur(
 
 
 def _collect_file(
-    filepath: str,
+    filepath: str, collect_prefix: str,
 ) -> Tuple[result_tree.BranchNode, Dict[str, result_tree.Node]]:
     reports_queue = queue.Queue()
-    plugin = ReporterPlugin(queue=reports_queue)
+    plugin = ReporterPlugin(queue=reports_queue, collect_prefix=collect_prefix)
     ret = pytest.main(["--collect-only", filepath], plugins=[plugin])
     if ret != 0:
         LOGGER.warning("Failed to collect tests from %s", filepath)
@@ -222,7 +222,7 @@ def _collect_file(
 
 
 def _tree_from_collect_report(
-    report: CollectReport,
+    report: CollectReport, collect_prefix: str,
 ) -> Tuple[result_tree.BranchNode, Dict[str, result_tree.Node]]:
     if report.outcome != "passed":
         node = result_tree.LeafNode(report.failure_nodeid)
@@ -230,7 +230,7 @@ def _tree_from_collect_report(
         node.longrepr = report.longrepr
         return node, {node.nodeid: node}
 
-    return result_tree.build_from_items(report.collected_items)
+    return result_tree.build_from_items(report.collected_items, collect_prefix)
 
 
 def _ensure_branch(
@@ -287,6 +287,11 @@ def _stop_all_environments(node: result_tree.BranchNode):
 
 
 def _get_queue_noblock(q: multiprocessing.Queue):
+    """
+    Receive from a multiprocessing.Queue object without blocking from an
+    eventlet green thread. Polls the queue and calls eventlet.sleep() to yield
+    to other threads in between.
+    """
     while True:
         try:
             return q.get_nowait()
@@ -298,9 +303,10 @@ class ReporterPlugin:
     """PyTest plugin used to run tests and store results in our tree."""
 
     def __init__(
-        self, queue: queue.Queue,
+        self, queue: queue.Queue, collect_prefix: str,
     ):
         self._queue = queue
+        self._collect_prefix = collect_prefix
         self._last_collectreport = None
 
     def pytest_collectreport(self, report: reports.CollectReport):
@@ -314,7 +320,7 @@ class ReporterPlugin:
             failure_nodeid=self._last_collectreport.nodeid,
             collected_items=session.items,
         )
-        self._queue.put(_tree_from_collect_report(report))
+        self._queue.put(_tree_from_collect_report(report, self._collect_prefix))
 
     def pytest_runtest_logreport(self, report: reports.TestReport):
         """
