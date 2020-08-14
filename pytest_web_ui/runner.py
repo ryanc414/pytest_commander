@@ -7,7 +7,7 @@ import os
 import multiprocessing
 import queue
 import subprocess
-from typing import Tuple, Dict, Callable, List, Union, Optional
+from typing import Tuple, Dict, Callable, List, Union, Optional, cast
 import pprint
 import collections
 
@@ -89,7 +89,7 @@ class PyTestRunner:
         self._send_update()
 
     def _run_test(self, nodeid: str):
-        result_queue: "multiprocessing.Queue[Union[reports.BaseReport, int]]" = multiprocessing.Queue()
+        result_queue: "multiprocessing.Queue[Union[Tuple[result_tree.Node, Dict[str, result_tree.Node]], TestReport, int]]" = multiprocessing.Queue()
         proc = multiprocessing.Process(
             target=_run_test,
             args=(nodeid, result_queue, self.result_tree.fspath, self._directory),
@@ -129,7 +129,7 @@ class PyTestRunner:
             f"updated result node: {result_node.nodeid} {result_node.status} {result_node.longrepr}"
         )
 
-    def _get_parent_node(self, node: result_tree.LeafNode):
+    def _get_parent_node(self, node: result_tree.Node):
         parent_node = self.result_tree
         for id in node.parent_ids:
             parent_node = parent_node.child_branches[id]
@@ -142,24 +142,17 @@ class PyTestRunner:
 
 def _run_test(
     nodeid: str,
-    mp_queue: "multiprocessing.Queue[Union[reports.BaseReport, int]]",
+    mp_queue: "multiprocessing.Queue[Union[Tuple[result_tree.Node, Dict[str, result_tree.Node]], TestReport, int]]",
     root_dir: str,
     test_dir: str,
 ):
     full_path = _get_full_path(nodeid, root_dir, test_dir)
-    LOGGER.debug("full_path: %s", full_path)
 
-    plugin = ReporterPlugin(queue=mp_queue)
+    collect_prefix = nodeid.rpartition("::")[0]
+    print(f"collect_prefix={collect_prefix}")
+    plugin = ReporterPlugin(queue=mp_queue, collect_prefix=collect_prefix)
     pytest.main([full_path, "-s"], plugins=[plugin])
     mp_queue.put(_DONE)
-
-
-def _listen_queue(queue, mp_queue):
-    while True:
-        item = queue.get()
-        mp_queue.put(item)
-        if item == _DONE:
-            return
 
 
 def _get_full_path(nodeid: str, root_dir: str, test_dir: str) -> str:
@@ -213,17 +206,20 @@ def _init_result_tree_recur(
 def _collect_file(
     filepath: str, collect_prefix: str,
 ) -> Tuple[result_tree.BranchNode, Dict[str, result_tree.Node]]:
-    reports_queue = queue.Queue()
+    reports_queue: "queue.Queue[Union[Tuple[result_tree.Node, Dict[str, result_tree.Node]], TestReport, int]]" = queue.Queue()
     plugin = ReporterPlugin(queue=reports_queue, collect_prefix=collect_prefix)
     ret = pytest.main(["--collect-only", filepath], plugins=[plugin])
     if ret != 0:
         LOGGER.warning("Failed to collect tests from %s", filepath)
-    return reports_queue.get()
+    res = reports_queue.get()
+    if not isinstance(res, tuple):
+        raise TypeError(f"unexpected return from queue: {res}")
+    return cast(Tuple[result_tree.BranchNode, Dict[str, result_tree.Node]], res)
 
 
 def _tree_from_collect_report(
     report: CollectReport, collect_prefix: str,
-) -> Tuple[result_tree.BranchNode, Dict[str, result_tree.Node]]:
+) -> Tuple[result_tree.Node, Dict[str, result_tree.Node]]:
     if report.outcome != "passed":
         node = result_tree.LeafNode(report.failure_nodeid)
         node.status = result_tree.TestState(report.outcome)
@@ -231,46 +227,6 @@ def _tree_from_collect_report(
         return node, {node.nodeid: node}
 
     return result_tree.build_from_items(report.collected_items, collect_prefix)
-
-
-def _ensure_branch(
-    node: Optional[result_tree.BranchNode],
-    short_ids: List[str],
-    report: CollectReport,
-    index: Dict[str, result_tree.BranchNode],
-):
-    next_id, rest_ids = short_ids[0], short_ids[1:]
-    if node is None:
-        node = result_tree.BranchNode(short_id=next_id)
-
-    if rest_ids:
-        node.child_branches[rest_ids[0]], index = _ensure_branch(
-            node.child_branches.get(rest_ids[0]), rest_ids, report, index
-        )
-    else:
-        node.nodeid = report.nodeid
-        node.longrepr = report.longrepr
-        node.fspath = report.fspath
-        node.child_leaves = _init_child_leaves(report.result)
-        index[node.nodeid] = node
-
-    return node, index
-
-
-def _init_child_leaves(result):
-    child_leaves = {}
-    for res in result:
-        node = result_tree.LeafNode(res.nodeid)
-        child_leaves[node.short_id] = node
-    return child_leaves
-
-
-def _split_nodeid(nodeid: str) -> List[str]:
-    """
-    path/to/test.py::TestSuite::test_case -> [test.py, TestSuite, test_case]
-    """
-    paths = nodeid.split("::")
-    return [paths[0].split("/")[-1]] + paths[1:]
 
 
 def _stop_all_environments(node: result_tree.BranchNode):
@@ -303,21 +259,29 @@ class ReporterPlugin:
     """PyTest plugin used to run tests and store results in our tree."""
 
     def __init__(
-        self, queue: queue.Queue, collect_prefix: str,
+        self,
+        queue: Union[
+            "queue.Queue[Union[Tuple[result_tree.Node, Dict[str, result_tree.Node]], TestReport, int]]",
+            "multiprocessing.Queue[Union[Tuple[result_tree.Node, Dict[str, result_tree.Node]], TestReport, int]]",
+        ],
+        collect_prefix: str,
     ):
         self._queue = queue
         self._collect_prefix = collect_prefix
-        self._last_collectreport = None
+        self._last_collectreport: Optional[reports.CollectReport] = None
 
     def pytest_collectreport(self, report: reports.CollectReport):
         """Hook called after a test has been collected."""
         self._last_collectreport = report
 
     def pytest_collection_finish(self, session: pytest.Session):
+        if self._last_collectreport is None:
+            raise RuntimeError("no collect reports found")
+        collect_report = cast(reports.CollectReport, self._last_collectreport)
         report = CollectReport(
-            outcome=self._last_collectreport.outcome,
-            longrepr=self._last_collectreport.longrepr,
-            failure_nodeid=self._last_collectreport.nodeid,
+            outcome=collect_report.outcome,
+            longrepr=collect_report.longrepr,
+            failure_nodeid=collect_report.nodeid,
             collected_items=session.items,
         )
         self._queue.put(_tree_from_collect_report(report, self._collect_prefix))

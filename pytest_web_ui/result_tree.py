@@ -69,16 +69,16 @@ class Node(abc.ABC):
         """Property getter for current status."""
         return self._get_status()
 
+    @status.setter
+    def status(self, new_status: TestState):
+        """"Property setter for current node status."""
+        self._set_status(new_status)
+
     @property
     @abc.abstractmethod
     def nodeid(self) -> str:
         """Return the unique ID for this node."""
         raise NotImplementedError
-
-    @status.setter
-    def status(self, new_status: TestState):
-        """"Property setter for current node status."""
-        self._set_status(new_status)
 
     @abc.abstractmethod
     def _get_status(self) -> TestState:
@@ -234,14 +234,12 @@ def build_from_items(
     items: List, nodeid_prefix: str
 ) -> Tuple[BranchNode, Dict[str, Node]]:
     """Build a result tree from the PyTest session object."""
-    child_branches = {}
+    child_branches: Dict[str, BranchNode] = {}
 
     for item in items:
         assert item.nodeid.startswith(nodeid_prefix)
         relative_nodeid = item.nodeid[len(nodeid_prefix) + 1 :]
-        print(f"*** relative_nodeid: {relative_nodeid}")
-        nodeid_components = _split_nodeid(relative_nodeid)
-        print(f"*** nodeid components: {nodeid_components}")
+        nodeid_components = split_nodeid(relative_nodeid)
         branch = _ensure_branch(child_branches, nodeid_components, nodeid_prefix)
         leaf = LeafNode(item.nodeid)
         branch.child_leaves[leaf.short_id] = leaf
@@ -253,13 +251,9 @@ def build_from_items(
     return root, nodes_index
 
 
-def _split_nodeid(nodeid: str) -> List[str]:
+def split_nodeid(nodeid: str) -> List[str]:
     components = nodeid.split("::")
     return components[0].split("/") + components[1:]
-
-
-def _join_nodeid(components: List[str]) -> str:
-    return "".join(components)
 
 
 def _ensure_branch(
@@ -273,7 +267,7 @@ def _ensure_branch(
     automatically created.
     """
     next_component, rest_components = nodeid_components[0], nodeid_components[1:]
-    nodeid = nodeid_prefix + next_component
+    nodeid = "::".join((nodeid_prefix, next_component))
     try:
         child = child_branches[next_component]
         assert child.nodeid == nodeid
@@ -283,9 +277,11 @@ def _ensure_branch(
 
     if len(rest_components) > 1:
         return _ensure_branch(child.child_branches, rest_components, nodeid)
-    else:
-        assert len(rest_components) == 1
+    elif len(rest_components) == 1:
         return child
+    else:
+        print(f"nodeid_components={nodeid_components} nodeid_prefix={nodeid_prefix}")
+        raise AssertionError
 
 
 def set_parent_ids(node: BranchNode):
