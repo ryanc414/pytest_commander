@@ -301,8 +301,8 @@ class ReporterPlugin:
         Hook called after a new test report is ready. Also called for
         setup/teardown.
         """
-        # Currently do nothing for setup/teardown.
-        if report.when != "call":
+        # Ignore reports for successful setup/teardown.
+        if report.outcome == "passed" and report.when != "call":
             return
         self._queue.put(
             TestReport(
