@@ -62,7 +62,7 @@ interface NavBranchEntriesProps {
  * @param props Render props
  */
 const NavBranchEntries = (props: NavBranchEntriesProps) => {
-  const childBranchIDs = Object.keys(props.childBranches);
+  const childBranchIDs = Object.keys(props.childBranches).sort();
   return (
     <>
       {
@@ -153,7 +153,7 @@ interface NavLeafEntriesProps {
  * @param props Render props
  */
 const NavLeafEntries = (props: NavLeafEntriesProps) => {
-  const childLeafIDs = Object.keys(props.childLeaves);
+  const childLeafIDs = Object.keys(props.childLeaves).sort();
 
   return (
     <>
