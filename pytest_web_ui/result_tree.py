@@ -17,6 +17,7 @@ import marshmallow_enum  # type: ignore
 from _pytest import nodes  # type: ignore
 
 from pytest_web_ui import environment
+from pytest_web_ui import nodeid
 
 
 class TestState(enum.Enum):
@@ -231,16 +232,18 @@ class LeafNode(Node):
 
 
 def build_from_items(
-    items: List, nodeid_prefix: str
+    items: List, nodeid_prefix_raw: str
 ) -> Tuple[BranchNode, Dict[str, Node]]:
     """Build a result tree from the PyTest session object."""
     child_branches: Dict[str, BranchNode] = {}
+    nodeid_prefix = nodeid.Nodeid.from_string(nodeid_prefix_raw)
+    num_prefix_frags = len(nodeid_prefix.fragments)
 
     for item in items:
-        assert item.nodeid.startswith(nodeid_prefix)
-        relative_nodeid = item.nodeid[len(nodeid_prefix) + 1 :]
-        nodeid_components = split_nodeid(relative_nodeid)
-        branch = _ensure_branch(child_branches, nodeid_components, nodeid_prefix)
+        assert item.nodeid.startswith(str(nodeid_prefix))
+        item_nodeid = nodeid.Nodeid.from_string(item.nodeid)
+        nodeid_fragments = item_nodeid.fragments[num_prefix_frags:]
+        branch = _ensure_branch(child_branches, nodeid_fragments, nodeid_prefix)
         leaf = LeafNode(item.nodeid)
         branch.child_leaves[leaf.short_id] = leaf
 
@@ -251,37 +254,32 @@ def build_from_items(
     return root, nodes_index
 
 
-def split_nodeid(nodeid: str) -> List[str]:
-    components = nodeid.split("::")
-    return components[0].split("/") + components[1:]
-
-
 def _ensure_branch(
     child_branches: Dict[str, BranchNode],
-    nodeid_components: List[str],
-    nodeid_prefix: str,
+    nodeid_fragments: List[nodeid.NodeidFragment],
+    nodeid_prefix: nodeid.Nodeid,
 ) -> BranchNode:
     """
     Retrieve the branch node under the given root node that corresponds to the given
     chain of collectors. If any branch nodes do not yet exist, they will be
     automatically created.
     """
-    next_component, rest_components = nodeid_components[0], nodeid_components[1:]
-    nodeid = "::".join((nodeid_prefix, next_component))
-    try:
-        child = child_branches[next_component]
-        assert child.nodeid == nodeid
-    except KeyError:
-        child = BranchNode(nodeid=nodeid, short_id=next_component)
-        child_branches[next_component] = child
+    next_fragment, rest_fragments = nodeid_fragments[0], nodeid_fragments[1:]
+    child_nodeid = nodeid_prefix.append(next_fragment)
 
-    if len(rest_components) > 1:
-        return _ensure_branch(child.child_branches, rest_components, nodeid)
-    elif len(rest_components) == 1:
+    try:
+        child = child_branches[next_fragment.val]
+        assert child.nodeid == str(child_nodeid)
+    except KeyError:
+        child = BranchNode(nodeid=str(child_nodeid), short_id=next_fragment.val)
+        child_branches[next_fragment.val] = child
+
+    if len(rest_fragments) > 1:
+        return _ensure_branch(child.child_branches, rest_fragments, child_nodeid)
+    elif len(rest_fragments) == 1:
         return child
     else:
-        print(f"nodeid_components={nodeid_components} nodeid_prefix={nodeid_prefix}")
-        raise AssertionError
+        raise RuntimeError
 
 
 def set_parent_ids(node: BranchNode):
