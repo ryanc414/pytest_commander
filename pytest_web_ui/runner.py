@@ -134,9 +134,6 @@ class PyTestRunner:
         assert isinstance(result_node, result_tree.LeafNode)
         result_node.status = result_tree.TestState(report.outcome)
         result_node.longrepr = report.longrepr
-        print(
-            f"updated result node: {result_node.nodeid} {result_node.status} {result_node.longrepr}"
-        )
 
     def _get_parent_node(
         self, raw_child_nodeid: str
@@ -163,9 +160,7 @@ def _run_test(
 ):
 
     test_nodeid = nodeid.Nodeid.from_string(raw_test_nodeid)
-    print(f"*** running {test_nodeid}")
     parent_nodeid = test_nodeid.parent
-    print(f"*** parent nodeid = {parent_nodeid}")
     plugin = ReporterPlugin(queue=mp_queue, collect_prefix=str(parent_nodeid))
     pytest.main([test_nodeid.fspath], plugins=[plugin])
     mp_queue.put(_DONE)

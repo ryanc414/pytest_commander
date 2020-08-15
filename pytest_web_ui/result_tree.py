@@ -238,16 +238,10 @@ def build_from_items(
     items: List, nodeid_prefix_raw: str
 ) -> Tuple[Node, Dict[str, Node]]:
     """Build a result tree from the PyTest session object."""
-    LOGGER.critical(
-        "*** building from items = %s, prefix = %s", items, nodeid_prefix_raw
-    )
     child_branches: Dict[str, BranchNode] = {}
     child_leaves: Dict[str, LeafNode] = {}
-    print(f"raw = {repr(nodeid_prefix_raw)}")
     nodeid_prefix = nodeid.Nodeid.from_string(nodeid_prefix_raw)
-    print(f"nodeid_prefix = {str(nodeid_prefix)} frags = {nodeid_prefix.fragments}")
     num_prefix_frags = len(nodeid_prefix.fragments)
-    print(f"num_prefix_frags = {num_prefix_frags}")
 
     for item in items:
         assert item.nodeid.startswith(str(nodeid_prefix))
