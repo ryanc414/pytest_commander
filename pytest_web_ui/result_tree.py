@@ -7,6 +7,7 @@ in the UI and to update with test results as they are available.
 from __future__ import annotations
 import abc
 import enum
+import logging
 import os
 import textwrap
 from typing import List, Tuple, Dict, Generator, Iterator, Optional, Any, cast
@@ -18,6 +19,8 @@ from _pytest import nodes  # type: ignore
 
 from pytest_web_ui import environment
 from pytest_web_ui import nodeid
+
+LOGGER = logging.getLogger(__name__)
 
 
 class TestState(enum.Enum):
@@ -235,10 +238,16 @@ def build_from_items(
     items: List, nodeid_prefix_raw: str
 ) -> Tuple[Node, Dict[str, Node]]:
     """Build a result tree from the PyTest session object."""
+    LOGGER.critical(
+        "*** building from items = %s, prefix = %s", items, nodeid_prefix_raw
+    )
     child_branches: Dict[str, BranchNode] = {}
     child_leaves: Dict[str, LeafNode] = {}
+    print(f"raw = {repr(nodeid_prefix_raw)}")
     nodeid_prefix = nodeid.Nodeid.from_string(nodeid_prefix_raw)
+    print(f"nodeid_prefix = {str(nodeid_prefix)} frags = {nodeid_prefix.fragments}")
     num_prefix_frags = len(nodeid_prefix.fragments)
+    print(f"num_prefix_frags = {num_prefix_frags}")
 
     for item in items:
         assert item.nodeid.startswith(str(nodeid_prefix))
@@ -260,7 +269,7 @@ def build_from_items(
         nodes_index = _build_index(root_branch)
         root = cast(Node, root_branch)
     else:
-        assert len(child_branches) == 0
+        assert len(child_branches) == 0, f"unexpected child branches: {child_branches}"
         assert len(child_leaves) == 1
         root = next(iter(child_leaves.values()))
         nodes_index = {root.nodeid: root}

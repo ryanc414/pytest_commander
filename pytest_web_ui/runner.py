@@ -103,7 +103,10 @@ class PyTestRunner:
         self._result_index.update(index)
         run_tree.status = result_tree.TestState.RUNNING
         parent_node = self._get_parent_node(run_tree.nodeid)
-        if isinstance(run_tree, result_tree.BranchNode):
+
+        if parent_node is None:
+            self.result_tree = run_tree
+        elif isinstance(run_tree, result_tree.BranchNode):
             parent_node.child_branches[run_tree.short_id] = run_tree
         else:
             assert isinstance(run_tree, result_tree.LeafNode)
@@ -135,10 +138,14 @@ class PyTestRunner:
             f"updated result node: {result_node.nodeid} {result_node.status} {result_node.longrepr}"
         )
 
-    def _get_parent_node(self, raw_child_nodeid: str) -> result_tree.BranchNode:
+    def _get_parent_node(
+        self, raw_child_nodeid: str
+    ) -> Optional[result_tree.BranchNode]:
         child_nodeid = nodeid.Nodeid.from_string(raw_child_nodeid)
-        parent_nodeid = child_nodeid.parent
-        parent_node = self._result_index[str(parent_nodeid)]
+        parent_nodeid = str(child_nodeid.parent)
+        if not parent_nodeid:
+            return None
+        parent_node = self._result_index[parent_nodeid]
         assert isinstance(parent_node, result_tree.BranchNode)
         return cast(result_tree.BranchNode, parent_node)
 
@@ -156,7 +163,10 @@ def _run_test(
 ):
 
     test_nodeid = nodeid.Nodeid.from_string(raw_test_nodeid)
-    plugin = ReporterPlugin(queue=mp_queue, collect_prefix=str(test_nodeid.parent))
+    print(f"*** running {test_nodeid}")
+    parent_nodeid = test_nodeid.parent
+    print(f"*** parent nodeid = {parent_nodeid}")
+    plugin = ReporterPlugin(queue=mp_queue, collect_prefix=str(parent_nodeid))
     pytest.main([test_nodeid.fspath], plugins=[plugin])
     mp_queue.put(_DONE)
 

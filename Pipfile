@@ -8,6 +8,7 @@ black = "*"
 mypy = "*"
 pylint = "*"
 twine = "*"
+icecream = "*"
 
 [requires]
 python_version = "3.8"

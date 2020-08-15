@@ -1,0 +1,43 @@
+{
+  "child_branches": {
+    "TestSuite": {
+      "child_branches": {},
+      "environment_state": "inactive",
+      "child_leaves": {
+        "test_one": {
+          "short_id": "test_one",
+          "nodeid": "path/to/test_a.py::TestSuite::test_one",
+          "longrepr": null,
+          "status": "init"
+        },
+        "test_two": {
+          "short_id": "test_two",
+          "nodeid": "path/to/test_a.py::TestSuite::test_two",
+          "longrepr": null,
+          "status": "init"
+        }
+      },
+      "status": "init",
+      "short_id": "TestSuite",
+      "nodeid": "path/to/test_a.py::TestSuite"
+    }
+  },
+  "environment_state": "inactive",
+  "child_leaves": {
+    "test_one": {
+      "short_id": "test_one",
+      "nodeid": "path/to/test_a.py::test_one",
+      "longrepr": null,
+      "status": "init"
+    },
+    "test_two": {
+      "short_id": "test_two",
+      "nodeid": "path/to/test_a.py::test_two",
+      "longrepr": null,
+      "status": "init"
+    }
+  },
+  "status": "init",
+  "short_id": "test_a.py",
+  "nodeid": "path/to/test_a.py"
+}

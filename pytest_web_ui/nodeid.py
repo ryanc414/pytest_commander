@@ -19,6 +19,9 @@ class Nodeid:
 
     @classmethod
     def from_string(cls, raw_nodeid: str) -> "Nodeid":
+        if not raw_nodeid:
+            return cls("", [])
+
         raw_components = raw_nodeid.split("::")
         path_components = [
             NodeidFragment(val=frag, is_path=True)
