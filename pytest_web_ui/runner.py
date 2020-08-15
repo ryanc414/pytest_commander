@@ -89,6 +89,7 @@ class PyTestRunner:
         node.environment.stop()
         self._send_update()
 
+    # TODO refactor
     def _run_test(self, nodeid: str):
         result_queue: "multiprocessing.Queue[Union[Tuple[result_tree.Node, Dict[str, result_tree.Node]], TestReport, int]]" = multiprocessing.Queue()
         proc = multiprocessing.Process(
@@ -101,16 +102,26 @@ class PyTestRunner:
         run_tree, index = _get_queue_noblock(result_queue)
         LOGGER.debug("got run_tree %s", run_tree)
         self._result_index.update(index)
-        run_tree.status = result_tree.TestState.RUNNING
-        parent_node = self._get_parent_node(run_tree.nodeid)
+        if run_tree.status == result_tree.TestState.INIT:
+            run_tree.status = result_tree.TestState.RUNNING
 
+        parent_node = self._get_parent_node(run_tree.nodeid)
         if parent_node is None:
             self.result_tree = run_tree
         elif isinstance(run_tree, result_tree.BranchNode):
             parent_node.child_branches[run_tree.short_id] = run_tree
+            try:
+                del parent_node.child_leaves[run_tree.short_id]
+            except KeyError:
+                pass
         else:
             assert isinstance(run_tree, result_tree.LeafNode)
             parent_node.child_leaves[run_tree.short_id] = run_tree
+            try:
+                del parent_node.child_branches[run_tree.short_id]
+            except KeyError:
+                pass
+
         self._send_update()
 
         eventlet.sleep()
@@ -294,7 +305,10 @@ class ReporterPlugin:
             failure_nodeid=collect_report.nodeid,
             collected_items=session.items,
         )
-        self._queue.put(_tree_from_collect_report(report, self._collect_prefix))
+        collected_tree, index = _tree_from_collect_report(report, self._collect_prefix)
+        if collect_report.outcome != "passed":
+            collected_tree.status = result_tree.TestState(collect_report.outcome)
+        self._queue.put((collected_tree, index))
 
     def pytest_runtest_logreport(self, report: reports.TestReport):
         """
