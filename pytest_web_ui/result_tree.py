@@ -7,6 +7,7 @@ in the UI and to update with test results as they are available.
 from __future__ import annotations
 import abc
 import enum
+import os
 import textwrap
 from typing import List, Tuple, Dict, Generator, Iterator, Optional, Any
 
@@ -109,12 +110,10 @@ class BranchNode(Node):
     def __init__(
         self,
         nodeid: str = "",
-        fspath: str = "",
         short_id: Optional[str] = None,
         env: Optional[environment.EnvironmentManager] = None,
     ):
         self._nodeid = nodeid
-        self._fspath = fspath
         self._short_id = short_id
         self.child_branches: Dict[str, BranchNode] = {}
         self.child_leaves: Dict[str, LeafNode] = {}
@@ -166,11 +165,7 @@ class BranchNode(Node):
     @property
     def fspath(self) -> str:
         """Filesystem path this test node corresponds to."""
-        return self._fspath
-
-    @fspath.setter
-    def fspath(self, path: str):
-        self._fspath = path
+        return self._nodeid.replace("/", os.sep)
 
     def _get_status(self) -> TestState:
         """Return status of child entries."""
@@ -208,6 +203,11 @@ class LeafNode(Node):
     @property
     def nodeid(self) -> str:
         return self._nodeid
+
+    @property
+    def fspath(self) -> str:
+        """Filesystem path this test node corresponds to."""
+        return self._nodeid.replace("/", os.sep)
 
     def pretty_format(self) -> str:
         """Output a pretty-formatted string of the whole tree, for debug purposes."""

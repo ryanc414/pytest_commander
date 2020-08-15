@@ -147,11 +147,10 @@ def _run_test(
     test_dir: str,
 ):
     full_path = _get_full_path(nodeid, root_dir, test_dir)
-
     collect_prefix = nodeid.rpartition("::")[0]
-    print(f"collect_prefix={collect_prefix}")
     plugin = ReporterPlugin(queue=mp_queue, collect_prefix=collect_prefix)
-    pytest.main([full_path, "-s"], plugins=[plugin])
+    print(f"*** full_path = {full_path}")
+    pytest.main([full_path], plugins=[plugin])
     mp_queue.put(_DONE)
 
 
@@ -178,7 +177,6 @@ def _init_result_tree_recur(
 ) -> Tuple[result_tree.BranchNode, Dict[str, result_tree.Node]]:
     root_node = result_tree.BranchNode(
         nodeid=directory.replace(os.sep, "/"),
-        fspath=directory,
         short_id=os.path.basename(directory),
         env=environment.EnvironmentManager(directory),
     )
