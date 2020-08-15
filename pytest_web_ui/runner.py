@@ -20,6 +20,7 @@ from _pytest import nodes  # type: ignore
 
 from pytest_web_ui import result_tree
 from pytest_web_ui import environment
+from pytest_web_ui import nodeid
 
 LOGGER = logging.getLogger(__name__)
 _DONE = 0xDEAD
@@ -94,30 +95,35 @@ class PyTestRunner:
             target=_run_test,
             args=(nodeid, result_queue, self.result_tree.fspath, self._directory),
         )
+        LOGGER.debug("running test %s", nodeid)
         proc.start()
 
         run_tree, index = _get_queue_noblock(result_queue)
+        LOGGER.debug("got run_tree %s", run_tree)
         self._result_index.update(index)
         run_tree.status = result_tree.TestState.RUNNING
-        parent_node = self._get_parent_node(self._result_index[run_tree.nodeid])
+        parent_node = self._get_parent_node(run_tree.nodeid)
         if isinstance(run_tree, result_tree.BranchNode):
             parent_node.child_branches[run_tree.short_id] = run_tree
         else:
             assert isinstance(run_tree, result_tree.LeafNode)
             parent_node.child_leaves[run_tree.short_id] = run_tree
-            proc.join()
-            return
+        self._send_update()
 
         eventlet.sleep()
 
         while True:
             val = _get_queue_noblock(result_queue)
             if val == _DONE:
+                LOGGER.debug("DONE received, breaking")
                 break
+            LOGGER.debug("adding test report %s", val)
             self._add_test_report(val)
+            self._send_update()
 
+        LOGGER.debug("joining child proc...")
         proc.join()
-        self._send_update()
+        LOGGER.debug("child proc joined")
 
     def _add_test_report(self, report: reports.TestReport):
         """Add a report into our result tree."""
@@ -129,28 +135,29 @@ class PyTestRunner:
             f"updated result node: {result_node.nodeid} {result_node.status} {result_node.longrepr}"
         )
 
-    def _get_parent_node(self, node: result_tree.Node):
-        parent_node = self.result_tree
-        for id in node.parent_ids:
-            parent_node = parent_node.child_branches[id]
-        return parent_node
+    def _get_parent_node(self, raw_child_nodeid: str) -> result_tree.BranchNode:
+        child_nodeid = nodeid.Nodeid.from_string(raw_child_nodeid)
+        parent_nodeid = child_nodeid.parent
+        parent_node = self._result_index[str(parent_nodeid)]
+        assert isinstance(parent_node, result_tree.BranchNode)
+        return cast(result_tree.BranchNode, parent_node)
 
     def _send_update(self):
+        LOGGER.debug("sending update")
         serialized_tree = self._branch_schema.dump(self.result_tree)
         self._socketio.emit("update", serialized_tree)
 
 
 def _run_test(
-    nodeid: str,
+    raw_test_nodeid: str,
     mp_queue: "multiprocessing.Queue[Union[Tuple[result_tree.Node, Dict[str, result_tree.Node]], TestReport, int]]",
     root_dir: str,
     test_dir: str,
 ):
-    full_path = _get_full_path(nodeid, root_dir, test_dir)
-    collect_prefix = nodeid.rpartition("::")[0]
-    plugin = ReporterPlugin(queue=mp_queue, collect_prefix=collect_prefix)
-    print(f"*** full_path = {full_path}")
-    pytest.main([full_path], plugins=[plugin])
+
+    test_nodeid = nodeid.Nodeid.from_string(raw_test_nodeid)
+    plugin = ReporterPlugin(queue=mp_queue, collect_prefix=str(test_nodeid.parent))
+    pytest.main([test_nodeid.fspath], plugins=[plugin])
     mp_queue.put(_DONE)
 
 

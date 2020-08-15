@@ -1,6 +1,7 @@
 """Classes to help interacting with pytest nodeids."""
 
 import collections
+import os
 from typing import List
 
 NodeidFragment = collections.namedtuple("NodeidFragment", ["val", "is_path"])
@@ -57,6 +58,17 @@ class Nodeid:
     def fragments(self) -> List[NodeidFragment]:
         return self._fragments
 
+    @property
+    def fspath(self):
+        return self._raw_nodeid.replace("/", os.sep)
+
     def append(self, fragment: NodeidFragment) -> "Nodeid":
         """Returns a new nodeid with the new fragment appended."""
         return Nodeid.from_fragments(self._fragments + [fragment])
+
+    @property
+    def parent(self) -> "Nodeid":
+        """Returns the parent nodeid."""
+        if not self._fragments:
+            raise RuntimeError("empty nodeid has no parents, like batman")
+        return Nodeid.from_fragments(self._fragments[:-1])

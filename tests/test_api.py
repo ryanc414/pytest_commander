@@ -51,6 +51,8 @@ def test_run_test(clients):
     total_rcvd = []
     while len(total_rcvd) < 2:
         rcvd = socket_client.get_received()
+        if rcvd:
+            print(f"*** rcvd: {rcvd}")
         eventlet.sleep(0.1)
         total_rcvd.extend(rcvd)
 

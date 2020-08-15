@@ -42,7 +42,7 @@ def test_run_tests(pyrunner):
     Test running tests from a single module.
     """
     pyrunner._run_test("pytest_examples/test_a.py")
-    pyrunner._socketio.emit.assert_called_once()
+    assert pyrunner._socketio.emit.call_count == 5
 
     for test_id in (
         "test_one",
@@ -52,11 +52,12 @@ def test_run_tests(pyrunner):
     ):
         nodeid = f"pytest_examples/test_a.py::{test_id}"
         node = pyrunner._result_index[nodeid]
-        assert node.report is not None
         assert node.status in (
             result_tree.TestState.PASSED,
             result_tree.TestState.FAILED,
         )
+        if node.status == result_tree.TestState.FAILED:
+            assert node.longrepr
 
     node = pyrunner._result_index["pytest_examples/test_a.py"]
     assert node.status == result_tree.TestState.FAILED

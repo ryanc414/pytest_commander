@@ -9,7 +9,7 @@ import abc
 import enum
 import os
 import textwrap
-from typing import List, Tuple, Dict, Generator, Iterator, Optional, Any
+from typing import List, Tuple, Dict, Generator, Iterator, Optional, Any, cast
 
 import marshmallow
 from marshmallow import fields
@@ -233,9 +233,10 @@ class LeafNode(Node):
 
 def build_from_items(
     items: List, nodeid_prefix_raw: str
-) -> Tuple[BranchNode, Dict[str, Node]]:
+) -> Tuple[Node, Dict[str, Node]]:
     """Build a result tree from the PyTest session object."""
     child_branches: Dict[str, BranchNode] = {}
+    child_leaves: Dict[str, LeafNode] = {}
     nodeid_prefix = nodeid.Nodeid.from_string(nodeid_prefix_raw)
     num_prefix_frags = len(nodeid_prefix.fragments)
 
@@ -243,14 +244,27 @@ def build_from_items(
         assert item.nodeid.startswith(str(nodeid_prefix))
         item_nodeid = nodeid.Nodeid.from_string(item.nodeid)
         nodeid_fragments = item_nodeid.fragments[num_prefix_frags:]
-        branch = _ensure_branch(child_branches, nodeid_fragments, nodeid_prefix)
         leaf = LeafNode(item.nodeid)
-        branch.child_leaves[leaf.short_id] = leaf
 
-    assert len(child_branches) == 1
-    root = next(iter(child_branches.values()))
+        if len(nodeid_fragments) > 1:
+            child = _ensure_branch(child_branches, nodeid_fragments, nodeid_prefix)
+            child.child_leaves[leaf.short_id] = leaf
+        else:
+            assert len(nodeid_fragments) == 1
+            child_leaves[leaf.short_id] = leaf
 
-    nodes_index = _build_index(root)
+    root: Node
+    if len(child_branches) == 1:
+        assert len(child_leaves) == 0
+        root_branch = next(iter(child_branches.values()))
+        nodes_index = _build_index(root_branch)
+        root = cast(Node, root_branch)
+    else:
+        assert len(child_branches) == 0
+        assert len(child_leaves) == 1
+        root = next(iter(child_leaves.values()))
+        nodes_index = {root.nodeid: root}
+
     return root, nodes_index
 
 
