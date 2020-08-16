@@ -62,23 +62,23 @@ class PyTestRunner:
         """
         self._socketio.start_background_task(self._run_test, nodeid)
 
-    def start_env(self, nodeid: str):
+    def start_env(self, env_nodeid: str):
         """
         Start the environment for a node. The node must be a branch node that has
         an environment which is not currently started.
         """
-        node = self._node_index[nodeid]
+        node = self._node_index[nodeid.Nodeid.from_string(env_nodeid)]
         if not isinstance(node, result_tree.BranchNode) or node.environment is None:
             raise ValueError(f"cannot start environment for node {nodeid}")
         node.environment.start()
         self._send_update()
 
-    def stop_env(self, nodeid: str):
+    def stop_env(self, env_nodeid: str):
         """
         Stop the environment for a node. The node must be a branch node that has
         an environment which is currently started.
         """
-        node = self._node_index[nodeid]
+        node = self._node_index[nodeid.Nodeid.from_string(env_nodeid)]
         if not isinstance(node, result_tree.BranchNode) or node.environment is None:
             raise ValueError(f"cannot start environment for node {nodeid}")
         node.environment.state = environment.EnvironmentState.STOPPING
@@ -142,17 +142,16 @@ class PyTestRunner:
 
     def _add_test_report(self, report: reports.TestReport):
         """Add a report into our result tree."""
-        result_node = self._node_index[report.nodeid]
+        result_node = self._node_index[nodeid.Nodeid.from_string(report.nodeid)]
         assert isinstance(result_node, result_tree.LeafNode)
         result_node.status = result_tree.TestState(report.outcome)
         result_node.longrepr = report.longrepr
 
     def _get_parent_node(
-        self, raw_child_nodeid: str
+        self, child_nodeid: nodeid.Nodeid
     ) -> Optional[result_tree.BranchNode]:
-        child_nodeid = nodeid.Nodeid.from_string(raw_child_nodeid)
-        parent_nodeid = str(child_nodeid.parent)
-        if not parent_nodeid:
+        parent_nodeid = child_nodeid.parent
+        if not str(parent_nodeid):
             return None
         parent_node = self._node_index[parent_nodeid]
         assert isinstance(parent_node, result_tree.BranchNode)
@@ -194,8 +193,7 @@ def _init_result_tree(directory: str,) -> result_tree.BranchNode:
 
 def _init_result_tree_recur(directory: str,) -> result_tree.BranchNode:
     root_node = result_tree.BranchNode(
-        nodeid=directory.replace(os.sep, "/"),
-        short_id=os.path.basename(directory),
+        branch_nodeid=nodeid.Nodeid.from_string(directory.replace(os.sep, "/")),
         env=environment.EnvironmentManager(directory),
     )
     with os.scandir(directory) as it:
@@ -231,7 +229,7 @@ def _tree_from_collect_report(
     report: CollectReport, collect_prefix: str,
 ) -> result_tree.Node:
     if report.outcome != "passed":
-        node = result_tree.LeafNode(report.failure_nodeid)
+        node = result_tree.LeafNode(nodeid.Nodeid.from_string(report.failure_nodeid))
         node.status = result_tree.TestState(report.outcome)
         node.longrepr = report.longrepr
         return node

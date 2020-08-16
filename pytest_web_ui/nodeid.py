@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import collections
 import os
-from typing import List
+from typing import List, Any
 
 NodeidFragment = collections.namedtuple("NodeidFragment", ["val", "is_path"])
 
@@ -54,6 +54,11 @@ class Nodeid:
     def __str__(self):
         return self._raw_nodeid
 
+    def __eq__(self, other: Any):
+        if isinstance(other, Nodeid):
+            return str(self) == str(other)
+        return False
+
     @property
     def raw(self) -> str:
         return self._raw_nodeid
@@ -76,3 +81,7 @@ class Nodeid:
         if not self._fragments:
             raise RuntimeError("empty nodeid has no parents, like batman")
         return Nodeid.from_fragments(self._fragments[:-1])
+
+    @property
+    def short_id(self) -> str:
+        return self.fragments[-1].val

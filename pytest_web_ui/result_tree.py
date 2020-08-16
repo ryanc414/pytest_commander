@@ -71,7 +71,7 @@ class Node(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def nodeid(self) -> str:
+    def nodeid(self) -> nodeid.Nodeid:
         """Return the unique ID for this node."""
         raise NotImplementedError
 
@@ -99,12 +99,10 @@ class BranchNode(Node):
 
     def __init__(
         self,
-        nodeid: str = "",
-        short_id: Optional[str] = None,
+        branch_nodeid: nodeid.Nodeid,
         env: Optional[environment.EnvironmentManager] = None,
     ):
-        self._nodeid = nodeid
-        self._short_id = short_id
+        self._nodeid = branch_nodeid
         self.child_branches: Dict[str, BranchNode] = {}
         self.child_leaves: Dict[str, LeafNode] = {}
         self.environment = env
@@ -143,25 +141,19 @@ class BranchNode(Node):
         return self.environment.state
 
     @property
-    def nodeid(self) -> str:
+    def nodeid(self) -> nodeid.Nodeid:
         """Unique ID of this node, used for indexing."""
         return self._nodeid
-
-    @nodeid.setter
-    def nodeid(self, nodeid: str):
-        self._nodeid = nodeid
 
     @property
     def short_id(self) -> str:
         """Short ID."""
-        if self._short_id:
-            return self._short_id
-        return self.nodeid.split("::")[-1].split("/")[-1]
+        return self.nodeid.short_id
 
     @property
     def fspath(self) -> str:
         """Filesystem path this test node corresponds to."""
-        return self._nodeid.replace("/", os.sep)
+        return self._nodeid.fspath
 
     @property
     def status(self) -> TestState:
@@ -180,7 +172,7 @@ class LeafNode(Node):
     as such, represents a test function or method.
     """
 
-    def __init__(self, nodeid: str):
+    def __init__(self, nodeid: nodeid.Nodeid):
         self._nodeid = nodeid
         self._status = TestState.INIT
         self.longrepr = None
@@ -197,18 +189,18 @@ class LeafNode(Node):
         return f"LeafNode <{self.nodeid} {self.status}>"
 
     @property
-    def nodeid(self) -> str:
+    def nodeid(self) -> nodeid.Nodeid:
         return self._nodeid
 
     @property
     def short_id(self) -> str:
         """Short ID."""
-        return self.nodeid.split("::")[-1].split("/")[-1]
+        return self.nodeid.short_id
 
     @property
     def fspath(self) -> str:
         """Filesystem path this test node corresponds to."""
-        return self._nodeid.replace("/", os.sep)
+        return self._nodeid.short_id
 
     def pretty_format(self) -> str:
         """Output a pretty-formatted string of the whole tree, for debug purposes."""
@@ -244,7 +236,7 @@ def build_from_items(items: List, nodeid_prefix_raw: str) -> Node:
         assert item.nodeid.startswith(str(nodeid_prefix))
         item_nodeid = nodeid.Nodeid.from_string(item.nodeid)
         nodeid_fragments = item_nodeid.fragments[num_prefix_frags:]
-        leaf = LeafNode(item.nodeid)
+        leaf = LeafNode(nodeid.Nodeid.from_string(item.nodeid))
 
         if len(nodeid_fragments) > 1:
             child = _ensure_branch(child_branches, nodeid_fragments, nodeid_prefix)
@@ -281,9 +273,9 @@ def _ensure_branch(
 
     try:
         child = child_branches[next_fragment.val]
-        assert child.nodeid == str(child_nodeid)
+        assert child.nodeid == child_nodeid
     except KeyError:
-        child = BranchNode(nodeid=str(child_nodeid), short_id=next_fragment.val)
+        child = BranchNode(branch_nodeid=child_nodeid)
         child_branches[next_fragment.val] = child
 
     if len(rest_fragments) > 1:
@@ -326,10 +318,9 @@ class Indexer:
     def __init__(self, root: BranchNode):
         self._root = root
 
-    def __getitem__(self, raw_item_nodeid: str) -> Node:
-        item_nodeid = nodeid.Nodeid.from_string(raw_item_nodeid)
+    def __getitem__(self, item_nodeid: nodeid.Nodeid) -> Node:
         node = self._root
-        assert item_nodeid.fragments[0].val == node.nodeid
+        assert item_nodeid.fragments[0].val == str(node.nodeid)
         for frag in item_nodeid.fragments[1:]:
             try:
                 node = node.child_branches[frag.val]

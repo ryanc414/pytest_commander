@@ -7,6 +7,7 @@ import pytest
 
 from pytest_web_ui import runner
 from pytest_web_ui import result_tree
+from pytest_web_ui import nodeid
 
 EXAMPLES_DIR = os.path.relpath(
     os.path.join(os.path.dirname(__file__), os.pardir, "pytest_examples")
@@ -50,8 +51,8 @@ def test_run_tests(pyrunner):
         "TestSuite::test_alpha",
         "TestSuite::test_beta",
     ):
-        nodeid = f"pytest_examples/test_a.py::{test_id}"
-        node = pyrunner._node_index[nodeid]
+        test_nodeid = nodeid.Nodeid.from_string(f"pytest_examples/test_a.py::{test_id}")
+        node = pyrunner._node_index[test_nodeid]
         assert node.status in (
             result_tree.TestState.PASSED,
             result_tree.TestState.FAILED,
@@ -59,5 +60,6 @@ def test_run_tests(pyrunner):
         if node.status == result_tree.TestState.FAILED:
             assert node.longrepr
 
-    node = pyrunner._node_index["pytest_examples/test_a.py"]
+    test_nodeid = nodeid.Nodeid.from_string("pytest_examples/test_a.py")
+    node = pyrunner._node_index[test_nodeid]
     assert node.status == result_tree.TestState.FAILED
