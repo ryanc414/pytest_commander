@@ -92,7 +92,7 @@ class PyTestRunner:
 
     # TODO refactor
     def _run_test(self, nodeid: str):
-        result_queue: "multiprocessing.Queue[Union[Tuple[result_tree.Node, Dict[str, result_tree.Node]], TestReport, int]]" = multiprocessing.Queue()
+        result_queue: "multiprocessing.Queue[Union[result_tree.Node, TestReport, int]]" = multiprocessing.Queue()
         proc = multiprocessing.Process(
             target=_run_test,
             args=(nodeid, result_queue, self.result_tree.fspath, self._directory),
