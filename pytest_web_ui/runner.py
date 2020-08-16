@@ -41,10 +41,11 @@ class PyTestRunner:
         self, directory: str, socketio: flask_socketio.SocketIO,
     ):
         self._directory = directory
-        self.result_tree, self._result_index = _init_result_tree(directory)
+        self.result_tree = _init_result_tree(directory)
         self._socketio = socketio
         self._branch_schema = result_tree.BranchNodeSchema()
         self._leaf_schema = result_tree.LeafNodeSchema()
+        self._node_index = result_tree.Indexer(self.result_tree)
 
     @contextlib.contextmanager
     def environment_manager(self):
@@ -66,7 +67,7 @@ class PyTestRunner:
         Start the environment for a node. The node must be a branch node that has
         an environment which is not currently started.
         """
-        node = self._result_index[nodeid]
+        node = self._node_index[nodeid]
         if not isinstance(node, result_tree.BranchNode) or node.environment is None:
             raise ValueError(f"cannot start environment for node {nodeid}")
         node.environment.start()
@@ -77,7 +78,7 @@ class PyTestRunner:
         Stop the environment for a node. The node must be a branch node that has
         an environment which is currently started.
         """
-        node = self._result_index[nodeid]
+        node = self._node_index[nodeid]
         if not isinstance(node, result_tree.BranchNode) or node.environment is None:
             raise ValueError(f"cannot start environment for node {nodeid}")
         node.environment.state = environment.EnvironmentState.STOPPING
@@ -99,15 +100,15 @@ class PyTestRunner:
         LOGGER.debug("running test %s", nodeid)
         proc.start()
 
-        run_tree, index = _get_queue_noblock(result_queue)
+        run_tree = _get_queue_noblock(result_queue)
         LOGGER.debug("got run_tree %s", run_tree)
-        self._result_index.update(index)
         if run_tree.status == result_tree.TestState.INIT:
             run_tree.status = result_tree.TestState.RUNNING
 
         parent_node = self._get_parent_node(run_tree.nodeid)
         if parent_node is None:
             self.result_tree = run_tree
+            self._node_index = result_tree.Indexer(run_tree)
         elif isinstance(run_tree, result_tree.BranchNode):
             parent_node.child_branches[run_tree.short_id] = run_tree
             try:
@@ -141,7 +142,7 @@ class PyTestRunner:
 
     def _add_test_report(self, report: reports.TestReport):
         """Add a report into our result tree."""
-        result_node = self._result_index[report.nodeid]
+        result_node = self._node_index[report.nodeid]
         assert isinstance(result_node, result_tree.LeafNode)
         result_node.status = result_tree.TestState(report.outcome)
         result_node.longrepr = report.longrepr
@@ -153,7 +154,7 @@ class PyTestRunner:
         parent_nodeid = str(child_nodeid.parent)
         if not parent_nodeid:
             return None
-        parent_node = self._result_index[parent_nodeid]
+        parent_node = self._node_index[parent_nodeid]
         assert isinstance(parent_node, result_tree.BranchNode)
         return cast(result_tree.BranchNode, parent_node)
 
@@ -165,7 +166,7 @@ class PyTestRunner:
 
 def _run_test(
     raw_test_nodeid: str,
-    mp_queue: "multiprocessing.Queue[Union[Tuple[result_tree.Node, Dict[str, result_tree.Node]], TestReport, int]]",
+    mp_queue: "multiprocessing.Queue[Union[result_tree.Node, TestReport, int]]",
     root_dir: str,
     test_dir: str,
 ):
@@ -183,69 +184,59 @@ def _get_full_path(nodeid: str, root_dir: str, test_dir: str) -> str:
     return nodeid.replace("/", os.sep)
 
 
-def _init_result_tree(
-    directory: str,
-) -> Tuple[result_tree.BranchNode, Dict[str, result_tree.Node]]:
+def _init_result_tree(directory: str,) -> result_tree.BranchNode:
     """Collect the tests and initialise the result tree skeleton."""
-    node, index = _init_result_tree_recur(directory)
+    node = _init_result_tree_recur(directory)
     if len(node.child_branches) == 0 and len(node.child_leaves) == 0:
         raise RuntimeError(f"failed to collect any tests from {directory}")
     for child_branch in node.child_branches.values():
         result_tree.set_parent_ids(child_branch)
-    return node, index
+    return node
 
 
-def _init_result_tree_recur(
-    directory: str,
-) -> Tuple[result_tree.BranchNode, Dict[str, result_tree.Node]]:
+def _init_result_tree_recur(directory: str,) -> result_tree.BranchNode:
     root_node = result_tree.BranchNode(
         nodeid=directory.replace(os.sep, "/"),
         short_id=os.path.basename(directory),
         env=environment.EnvironmentManager(directory),
     )
-    nodes_index: Dict[str, result_tree.Node] = {root_node.nodeid: root_node}
-
     with os.scandir(directory) as it:
         for entry in it:
             if entry.is_file() and entry.name.endswith(".py"):
-                node, index = _collect_file(entry.path, directory)
+                node = _collect_file(entry.path, directory)
             elif entry.is_dir():
-                node, index = _init_result_tree_recur(entry.path)
+                node = _init_result_tree_recur(entry.path)
             else:
                 continue
 
             if isinstance(node, result_tree.LeafNode):
                 root_node.child_leaves[node.short_id] = node
-                nodes_index.update(index)
             elif list(node.iter_children()):
                 root_node.child_branches[node.short_id] = node
-                nodes_index.update(index)
 
-    return root_node, nodes_index
+    return root_node
 
 
-def _collect_file(
-    filepath: str, collect_prefix: str,
-) -> Tuple[result_tree.BranchNode, Dict[str, result_tree.Node]]:
-    reports_queue: "queue.Queue[Union[Tuple[result_tree.Node, Dict[str, result_tree.Node]], TestReport, int]]" = queue.Queue()
+def _collect_file(filepath: str, collect_prefix: str,) -> result_tree.BranchNode:
+    reports_queue: "queue.Queue[Union[result_tree.Node, TestReport, int]]" = queue.Queue()
     plugin = ReporterPlugin(queue=reports_queue, collect_prefix=collect_prefix)
     ret = pytest.main(["--collect-only", filepath], plugins=[plugin])
     if ret != 0:
         LOGGER.warning("Failed to collect tests from %s", filepath)
     res = reports_queue.get()
-    if not isinstance(res, tuple):
+    if not isinstance(res, result_tree.BranchNode):
         raise TypeError(f"unexpected return from queue: {res}")
-    return cast(Tuple[result_tree.BranchNode, Dict[str, result_tree.Node]], res)
+    return cast(result_tree.BranchNode, res)
 
 
 def _tree_from_collect_report(
     report: CollectReport, collect_prefix: str,
-) -> Tuple[result_tree.Node, Dict[str, result_tree.Node]]:
+) -> result_tree.Node:
     if report.outcome != "passed":
         node = result_tree.LeafNode(report.failure_nodeid)
         node.status = result_tree.TestState(report.outcome)
         node.longrepr = report.longrepr
-        return node, {node.nodeid: node}
+        return node
 
     return result_tree.build_from_items(report.collected_items, collect_prefix)
 
@@ -281,10 +272,7 @@ class ReporterPlugin:
 
     def __init__(
         self,
-        queue: Union[
-            "queue.Queue[Union[Tuple[result_tree.Node, Dict[str, result_tree.Node]], TestReport, int]]",
-            "multiprocessing.Queue[Union[Tuple[result_tree.Node, Dict[str, result_tree.Node]], TestReport, int]]",
-        ],
+        queue: "queue.Queue[Union[result_tree.Node, TestReport, int]]",
         collect_prefix: str,
     ):
         self._queue = queue
@@ -305,10 +293,10 @@ class ReporterPlugin:
             failure_nodeid=collect_report.nodeid,
             collected_items=session.items,
         )
-        collected_tree, index = _tree_from_collect_report(report, self._collect_prefix)
+        collected_tree = _tree_from_collect_report(report, self._collect_prefix)
         if collect_report.outcome != "passed":
             collected_tree.status = result_tree.TestState(collect_report.outcome)
-        self._queue.put((collected_tree, index))
+        self._queue.put(collected_tree)
 
     def pytest_runtest_logreport(self, report: reports.TestReport):
         """

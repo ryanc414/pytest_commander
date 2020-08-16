@@ -234,9 +234,7 @@ class LeafNode(Node):
         self._status = new_status
 
 
-def build_from_items(
-    items: List, nodeid_prefix_raw: str
-) -> Tuple[Node, Dict[str, Node]]:
+def build_from_items(items: List, nodeid_prefix_raw: str) -> Node:
     """Build a result tree from the PyTest session object."""
     child_branches: Dict[str, BranchNode] = {}
     child_leaves: Dict[str, LeafNode] = {}
@@ -260,15 +258,13 @@ def build_from_items(
     if len(child_branches) == 1:
         assert len(child_leaves) == 0
         root_branch = next(iter(child_branches.values()))
-        nodes_index = _build_index(root_branch)
         root = cast(Node, root_branch)
     else:
         assert len(child_branches) == 0, f"unexpected child branches: {child_branches}"
         assert len(child_leaves) == 1
         root = next(iter(child_leaves.values()))
-        nodes_index = {root.nodeid: root}
 
-    return root, nodes_index
+    return root
 
 
 def _ensure_branch(
@@ -346,3 +342,22 @@ class BranchNodeSchema(NodeSchema):
     environment_state = marshmallow_enum.EnumField(
         environment.EnvironmentState, by_value=True
     )
+
+
+class Indexer:
+    """Indexer allows read-only access to a result tree from a given nodeid."""
+
+    def __init__(self, root: BranchNode):
+        self._root = root
+
+    def __getitem__(self, raw_item_nodeid: str) -> Node:
+        item_nodeid = nodeid.Nodeid.from_string(raw_item_nodeid)
+        node = self._root
+        assert item_nodeid.fragments[0].val == node.nodeid
+        for frag in item_nodeid.fragments[1:]:
+            try:
+                node = node.child_branches[frag.val]
+            except KeyError:
+                return node.child_leaves[frag.val]
+
+        return node

@@ -26,7 +26,7 @@ ITEMS = [
     [("path/to", "test_build_tree_path.json"), ("", "test_build_tree_root.json")],
 )
 def test_build_tree(prefix, filename):
-    tree, _ = result_tree.build_from_items(ITEMS, prefix)
+    tree = result_tree.build_from_items(ITEMS, prefix)
     assert isinstance(tree, result_tree.BranchNode)
     serializer = result_tree.BranchNodeSchema()
     serialized_tree = serializer.dump(tree)

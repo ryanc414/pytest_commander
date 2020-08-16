@@ -51,7 +51,7 @@ def test_run_tests(pyrunner):
         "TestSuite::test_beta",
     ):
         nodeid = f"pytest_examples/test_a.py::{test_id}"
-        node = pyrunner._result_index[nodeid]
+        node = pyrunner._node_index[nodeid]
         assert node.status in (
             result_tree.TestState.PASSED,
             result_tree.TestState.FAILED,
@@ -59,5 +59,5 @@ def test_run_tests(pyrunner):
         if node.status == result_tree.TestState.FAILED:
             assert node.longrepr
 
-    node = pyrunner._result_index["pytest_examples/test_a.py"]
+    node = pyrunner._node_index["pytest_examples/test_a.py"]
     assert node.status == result_tree.TestState.FAILED
