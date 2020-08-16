@@ -189,8 +189,6 @@ def _init_result_tree(directory: str,) -> result_tree.BranchNode:
     node = _init_result_tree_recur(directory)
     if len(node.child_branches) == 0 and len(node.child_leaves) == 0:
         raise RuntimeError(f"failed to collect any tests from {directory}")
-    for child_branch in node.child_branches.values():
-        result_tree.set_parent_ids(child_branch)
     return node
 
 

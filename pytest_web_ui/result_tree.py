@@ -58,26 +58,16 @@ def _status_precedent(statuses: Iterator[TestState]) -> TestState:
 class Node(abc.ABC):
     """Define common interface for branch and leaf nodes."""
 
-    def __init__(self):
-        self.parent_ids: List[str] = []
-        self._short_id = None
-
     @property
-    def short_id(self) -> str:
-        """Short ID."""
-        if self._short_id:
-            return self._short_id
-        return self.nodeid.split("::")[-1].split("/")[-1]
-
-    @property
+    @abc.abstractmethod
     def status(self) -> TestState:
         """Property getter for current status."""
-        return self._get_status()
+        raise NotImplementedError
 
     @status.setter
     def status(self, new_status: TestState):
-        """"Property setter for current node status."""
-        self._set_status(new_status)
+        """Property setter for current status."""
+        raise NotImplementedError
 
     @property
     @abc.abstractmethod
@@ -85,14 +75,10 @@ class Node(abc.ABC):
         """Return the unique ID for this node."""
         raise NotImplementedError
 
+    @property
     @abc.abstractmethod
-    def _get_status(self) -> TestState:
-        """Get the current status of this node."""
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def _set_status(self, new_status: TestState):
-        """Set the current status of this node."""
+    def short_id(self) -> str:
+        """Return the short ID label for this node."""
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -121,7 +107,6 @@ class BranchNode(Node):
         self._short_id = short_id
         self.child_branches: Dict[str, BranchNode] = {}
         self.child_leaves: Dict[str, LeafNode] = {}
-        self.parent_ids: List[str] = []
         self.environment = env
 
     def __eq__(self, other: object) -> bool:
@@ -167,15 +152,24 @@ class BranchNode(Node):
         self._nodeid = nodeid
 
     @property
+    def short_id(self) -> str:
+        """Short ID."""
+        if self._short_id:
+            return self._short_id
+        return self.nodeid.split("::")[-1].split("/")[-1]
+
+    @property
     def fspath(self) -> str:
         """Filesystem path this test node corresponds to."""
         return self._nodeid.replace("/", os.sep)
 
-    def _get_status(self) -> TestState:
+    @property
+    def status(self) -> TestState:
         """Return status of child entries."""
         return _status_precedent(child.status for child in self.iter_children())
 
-    def _set_status(self, new_status: TestState):
+    @status.setter
+    def status(self, new_status: TestState):
         for child in self.iter_children():
             child.status = new_status
 
@@ -188,9 +182,7 @@ class LeafNode(Node):
 
     def __init__(self, nodeid: str):
         self._nodeid = nodeid
-        self._short_id = None
         self._status = TestState.INIT
-        self.parent_ids: List[str] = []
         self.longrepr = None
 
     def __eq__(self, other: object) -> bool:
@@ -209,6 +201,11 @@ class LeafNode(Node):
         return self._nodeid
 
     @property
+    def short_id(self) -> str:
+        """Short ID."""
+        return self.nodeid.split("::")[-1].split("/")[-1]
+
+    @property
     def fspath(self) -> str:
         """Filesystem path this test node corresponds to."""
         return self._nodeid.replace("/", os.sep)
@@ -217,7 +214,8 @@ class LeafNode(Node):
         """Output a pretty-formatted string of the whole tree, for debug purposes."""
         return str(self)
 
-    def _get_status(self) -> TestState:
+    @property
+    def status(self) -> TestState:
         """
         Get the status of this entry. If there is a test report that means the test has
         run and we get the status from the report. Otherwise, the status may be either
@@ -225,7 +223,8 @@ class LeafNode(Node):
         """
         return self._status
 
-    def _set_status(self, new_status):
+    @status.setter
+    def status(self, new_status):
         """
         Update the status. This is only called to either set this node as RUNNING or
         reset the state to INIT. In either case, we reset the test report to None if
@@ -293,29 +292,6 @@ def _ensure_branch(
         return child
     else:
         raise RuntimeError
-
-
-def set_parent_ids(node: BranchNode):
-    """
-    Recursively set the parent_ids attribute on this node and all of its
-    children, based on the current tree structure.
-    """
-    for child_branch in node.child_branches.values():
-        child_branch.parent_ids = node.parent_ids + [node.short_id]
-        set_parent_ids(child_branch)
-
-    for child_leaf in node.child_leaves.values():
-        child_leaf.parent_ids = node.parent_ids + [node.short_id]
-
-
-def _build_index(node: BranchNode) -> Dict[str, Node]:
-    index: Dict[str, Node] = {node.nodeid: node}
-    for child_leaf in node.child_leaves.values():
-        index[child_leaf.nodeid] = child_leaf
-    for child_branch in node.child_branches.values():
-        index.update(_build_index(child_branch))
-
-    return index
 
 
 class NodeSchema(marshmallow.Schema):
