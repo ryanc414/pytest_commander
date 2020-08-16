@@ -33,27 +33,31 @@ export const NavColumn = (props: NavColumnProps) => {
   return (
     <div className={css(styles.navColumn)}>
       <ListGroup>
-        <NavBranchEntries
+        <NavEntries
           childBranches={props.childBranches}
+          childLeaves={props.childLeaves}
           selection={props.selection}
+          selectedLeafID={props.selectedLeafID}
           handleTestRun={props.handleTestRun}
           handleEnvToggle={props.handleEnvToggle}
-        />
-        <NavLeafEntries
-          childLeaves={props.childLeaves}
-          handleTestRun={props.handleTestRun}
-          selectedLeafID={props.selectedLeafID}
         />
       </ListGroup>
     </div>
   );
 };
 
-interface NavBranchEntriesProps {
+interface NavEntriesProps {
   childBranches: { [key: string]: BranchNode },
+  childLeaves: { [key: string]: LeafNode },
   selection: Array<string>,
+  selectedLeafID: string | null,
   handleTestRun: (nodeid: string) => void,
   handleEnvToggle: (nodeid: string, start: boolean) => void,
+}
+
+interface NodeIDInfo {
+  shortID: string,
+  branch: boolean,
 }
 
 /**
@@ -61,50 +65,79 @@ interface NavBranchEntriesProps {
  * currently selected node.
  * @param props Render props
  */
-const NavBranchEntries = (props: NavBranchEntriesProps) => {
-  const childBranchIDs = Object.keys(props.childBranches).sort();
+const NavEntries = (props: NavEntriesProps) => {
+  const childIDs = Object.keys(props.childBranches).map(
+    shortID => ({shortID: shortID, branch: true})
+  ).concat(
+    Object.keys(props.childLeaves).map(
+      shortID => ({shortID: shortID, branch: false})
+    )
+  ).sort((a: NodeIDInfo, b: NodeIDInfo) => (a.shortID.localeCompare(b.shortID)))
+
   return (
     <>
       {
-        childBranchIDs.map(
-          (short_id: string) => {
-            const childNode = props.childBranches[short_id];
-            console.log(props.selection);
-            const linkAddr = "/" + props.selection
-              .concat([short_id])
-              .map(encodeURIComponent)
-              .join("/");
-            console.log(linkAddr);
-            console.log("updated");
-
-            return (
-              <ListGroupItem
-                key={short_id}
-                className={
-                  css(
-                    getNavEntryStyle(childNode.status),
-                    styles.navEntryCommon,
-                  )
-                }
-              >
-                <span className={css(styles.navLabel)}>
-                  <Link
-                    to={linkAddr}
-                  >
-                    {short_id}
-                  </Link>
-                </span>
-                <BranchEntryButtons
-                  node={childNode}
-                  handleTestRun={props.handleTestRun}
-                  handleEnvToggle={props.handleEnvToggle}
-                />
-              </ListGroupItem>
-            );
+        childIDs.map(
+          (nodeInfo: NodeIDInfo) => {
+            if (nodeInfo.branch) {
+              const childNode = props.childBranches[nodeInfo.shortID]
+              return <BranchEntry
+                node={childNode}
+                selection={props.selection}
+                handleTestRun={props.handleTestRun}
+                handleEnvToggle={props.handleEnvToggle}
+              />
+            } else {
+              const childNode = props.childLeaves[nodeInfo.shortID]
+              return <LeafEntry
+                node={childNode}
+                selectedLeafID={props.selectedLeafID}
+                handleTestRun={props.handleTestRun}
+              />
+            }
           }
         )
       }
     </>
+  );
+};
+
+interface BranchEntryProps {
+  node: BranchNode,
+  selection: Array<string>,
+  handleTestRun: (nodeid: string) => void,
+  handleEnvToggle: (nodeid: string, start: boolean) => void,
+}
+
+const BranchEntry = (props: BranchEntryProps) => {
+  const linkAddr = "/" + props.selection
+    .concat([props.node.short_id])
+    .map(encodeURIComponent)
+    .join("/");
+
+  return (
+    <ListGroupItem
+      key={props.node.short_id}
+      className={
+        css(
+          getNavEntryStyle(props.node.status),
+          styles.navEntryCommon,
+        )
+      }
+    >
+      <span className={css(styles.navLabel)}>
+        <Link
+          to={linkAddr}
+        >
+          {props.node.short_id}
+        </Link>
+      </span>
+      <BranchEntryButtons
+        node={props.node}
+        handleTestRun={props.handleTestRun}
+        handleEnvToggle={props.handleEnvToggle}
+      />
+    </ListGroupItem>
   );
 };
 
@@ -141,8 +174,8 @@ const BranchEntryButtons: React.FunctionComponent<BranchEntryButtonsProps> = pro
   );
 };
 
-interface NavLeafEntriesProps {
-  childLeaves: { [key: string]: LeafNode },
+interface LeafEntryProps {
+  node: LeafNode
   selectedLeafID: string | null,
   handleTestRun: (nodeid: string) => void,
 }
@@ -152,49 +185,37 @@ interface NavLeafEntriesProps {
  * selected node.
  * @param props Render props
  */
-const NavLeafEntries = (props: NavLeafEntriesProps) => {
-  const childLeafIDs = Object.keys(props.childLeaves).sort();
+const LeafEntry = (props: LeafEntryProps) => {
+  const shortID = props.node.short_id
+  const label = (shortID === props.selectedLeafID) ?
+    shortID :
+    (
+      <Link
+        to={`?selectedLeaf=${encodeURIComponent(shortID)}`}
+      >
+        {shortID}
+      </Link>
+    );
 
   return (
-    <>
-      {
-        childLeafIDs.map(
-          (short_id: string) => {
-            const label = (short_id === props.selectedLeafID) ?
-              short_id :
-              (
-                <Link
-                  to={`?selectedLeaf=${encodeURIComponent(short_id)}`}
-                >
-                  {short_id}
-                </Link>
-              );
-            const childLeaf = props.childLeaves[short_id];
-
-            return (
-              <ListGroupItem
-                key={short_id}
-                className={
-                  css(
-                    getNavEntryStyle(
-                      props.childLeaves[short_id].status
-                    ),
-                    styles.navEntryCommon,
-                  )
-                }
-              >
-                <span className={css(styles.navLabel)}>{label}</span>
-                <NavEntryIcon
-                  nodeid={childLeaf.nodeid}
-                  status={childLeaf.status}
-                  handleTestRun={props.handleTestRun}
-                />
-              </ListGroupItem>
-            );
-          }
+    <ListGroupItem
+      key={shortID}
+      className={
+        css(
+          getNavEntryStyle(
+            props.node.status
+          ),
+          styles.navEntryCommon,
         )
       }
-    </>
+    >
+      <span className={css(styles.navLabel)}>{label}</span>
+      <NavEntryIcon
+        nodeid={props.node.nodeid}
+        status={props.node.status}
+        handleTestRun={props.handleTestRun}
+      />
+    </ListGroupItem>
   );
 };
 
