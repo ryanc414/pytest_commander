@@ -1,6 +1,7 @@
 """HTTP API for PyTest runner."""
 import logging
 import os
+import traceback
 from typing import Dict, Any, Tuple
 
 import flask
@@ -39,7 +40,11 @@ def build_app(
 
     @app.route("/api/v1/result-tree")
     def tree() -> Dict[str, Any]:
-        return branch_schema.dump(test_runner.result_tree)
+        try:
+            return branch_schema.dump(test_runner.result_tree)
+        except Exception:
+            traceback.print_exc()
+            raise
 
     @socketio.on("run test")
     def run_test(nodeid):

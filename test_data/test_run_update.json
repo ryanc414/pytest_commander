@@ -3,55 +3,55 @@
     "name": "update",
     "args": [
       {
-        "status": "running",
-        "environment_state": "stopped",
-        "child_leaves": {},
         "short_id": "pytest_examples",
-        "nodeid": "",
+        "child_leaves": {},
         "child_branches": {
           "test_a.py": {
-            "status": "running",
-            "environment_state": "inactive",
+            "short_id": "test_a.py",
             "child_leaves": {
               "test_one": {
-                "status": "running",
                 "longrepr": null,
-                "short_id": "test_one",
-                "nodeid": "test_a.py::test_one"
+                "status": "running",
+                "nodeid": "test_a.py::test_one",
+                "short_id": "test_one"
               }
             },
-            "short_id": "test_a.py",
+            "child_branches": {},
             "nodeid": "test_a.py",
-            "child_branches": {}
+            "environment_state": "inactive",
+            "status": "running"
           },
           "test_b.py": {
-            "status": "init",
-            "environment_state": "inactive",
+            "short_id": "test_b.py",
             "child_leaves": {
               "test_one": {
-                "status": "init",
                 "longrepr": null,
-                "short_id": "test_one",
-                "nodeid": "test_b.py::test_one"
+                "status": "init",
+                "nodeid": "test_b.py::test_one",
+                "short_id": "test_one"
               },
               "test_two": {
-                "status": "init",
                 "longrepr": null,
-                "short_id": "test_two",
-                "nodeid": "test_b.py::test_two"
+                "status": "init",
+                "nodeid": "test_b.py::test_two",
+                "short_id": "test_two"
               },
               "test_http_service": {
-                "status": "init",
                 "longrepr": null,
-                "short_id": "test_http_service",
-                "nodeid": "test_b.py::test_http_service"
+                "status": "init",
+                "nodeid": "test_b.py::test_http_service",
+                "short_id": "test_http_service"
               }
             },
-            "short_id": "test_b.py",
+            "child_branches": {},
             "nodeid": "test_b.py",
-            "child_branches": {}
+            "environment_state": "inactive",
+            "status": "init"
           }
-        }
+        },
+        "nodeid": "",
+        "environment_state": "stopped",
+        "status": "running"
       }
     ],
     "namespace": "/"
@@ -60,55 +60,55 @@
     "name": "update",
     "args": [
       {
-        "status": "passed",
-        "environment_state": "stopped",
-        "child_leaves": {},
         "short_id": "pytest_examples",
-        "nodeid": "",
+        "child_leaves": {},
         "child_branches": {
           "test_a.py": {
-            "status": "passed",
-            "environment_state": "inactive",
+            "short_id": "test_a.py",
             "child_leaves": {
               "test_one": {
-                "status": "passed",
                 "longrepr": null,
-                "short_id": "test_one",
-                "nodeid": "test_a.py::test_one"
+                "status": "passed",
+                "nodeid": "test_a.py::test_one",
+                "short_id": "test_one"
               }
             },
-            "short_id": "test_a.py",
+            "child_branches": {},
             "nodeid": "test_a.py",
-            "child_branches": {}
+            "environment_state": "inactive",
+            "status": "passed"
           },
           "test_b.py": {
-            "status": "init",
-            "environment_state": "inactive",
+            "short_id": "test_b.py",
             "child_leaves": {
               "test_one": {
-                "status": "init",
                 "longrepr": null,
-                "short_id": "test_one",
-                "nodeid": "test_b.py::test_one"
+                "status": "init",
+                "nodeid": "test_b.py::test_one",
+                "short_id": "test_one"
               },
               "test_two": {
-                "status": "init",
                 "longrepr": null,
-                "short_id": "test_two",
-                "nodeid": "test_b.py::test_two"
+                "status": "init",
+                "nodeid": "test_b.py::test_two",
+                "short_id": "test_two"
               },
               "test_http_service": {
-                "status": "init",
                 "longrepr": null,
-                "short_id": "test_http_service",
-                "nodeid": "test_b.py::test_http_service"
+                "status": "init",
+                "nodeid": "test_b.py::test_http_service",
+                "short_id": "test_http_service"
               }
             },
-            "short_id": "test_b.py",
+            "child_branches": {},
             "nodeid": "test_b.py",
-            "child_branches": {}
+            "environment_state": "inactive",
+            "status": "init"
           }
-        }
+        },
+        "nodeid": "",
+        "environment_state": "stopped",
+        "status": "passed"
       }
     ],
     "namespace": "/"

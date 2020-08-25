@@ -180,7 +180,7 @@ def _run_test(
 def _init_result_tree(directory: str,) -> result_tree.BranchNode:
     """Collect the tests and initialise the result tree skeleton."""
     root_node = _collect_path(directory)
-    root_node.short_id = os.path.basename(directory)
+    root_node.short_id = os.path.basename(directory.rstrip(os.sep))
 
     if len(root_node.child_branches) == 0 and len(root_node.child_leaves) == 0:
         raise RuntimeError(f"failed to collect any tests from {directory}")
