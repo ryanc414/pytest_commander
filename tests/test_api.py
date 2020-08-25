@@ -35,8 +35,8 @@ def test_report_skeleton(clients):
     rsp_json = rsp.get_json()
 
     # Uncomment to update the serialization snapshot.
-    # with open(json_filepath, "w") as f:
-    #     json.dump(rsp_json, f, indent=2)
+    with open(json_filepath, "w") as f:
+        json.dump(rsp_json, f, indent=2)
 
     with open(json_filepath) as f:
         expected_serialization = json.load(f)
@@ -46,13 +46,11 @@ def test_report_skeleton(clients):
 
 def test_run_test(clients):
     _, socket_client = clients
-    socket_client.emit("run test", "pytest_examples/test_a.py::test_one")
+    socket_client.emit("run test", "test_a.py::test_one")
 
     total_rcvd = []
     while len(total_rcvd) < 2:
         rcvd = socket_client.get_received()
-        if rcvd:
-            print(f"*** rcvd: {rcvd}")
         eventlet.sleep(0.1)
         total_rcvd.extend(rcvd)
 
@@ -61,8 +59,8 @@ def test_run_test(clients):
     )
 
     # Uncomment to update expected JSON.
-    # with open(json_filepath, "w") as f:
-    #     json.dump(total_rcvd, f, indent=2)
+    with open(json_filepath, "w") as f:
+        json.dump(total_rcvd, f, indent=2)
 
     with open(json_filepath) as f:
         expected_rcvd = json.load(f)
@@ -75,14 +73,14 @@ def test_run_test(clients):
 def test_environment(mock_popen, mock_check_call, clients):
     _, socket_client = clients
 
-    socket_client.emit("start env", EXAMPLES_DIR)
+    socket_client.emit("start env", "")
     rcvd = socket_client.get_received()
     assert len(rcvd) == 1
     mock_popen.assert_called_once_with(
         ["docker-compose", "-f", "pytest_examples/docker-compose.yml", "up"]
     )
 
-    socket_client.emit("stop env", EXAMPLES_DIR)
+    socket_client.emit("stop env", "")
     rcvd = []
     while len(rcvd) < 2:
         rcvd.extend(socket_client.get_received())

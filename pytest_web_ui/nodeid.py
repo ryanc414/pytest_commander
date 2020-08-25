@@ -85,3 +85,6 @@ class Nodeid:
     @property
     def short_id(self) -> str:
         return self.fragments[-1].val
+
+
+EMPTY_NODEID = Nodeid("", [])

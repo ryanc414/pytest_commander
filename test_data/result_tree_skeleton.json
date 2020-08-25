@@ -7,19 +7,19 @@
           "child_leaves": {
             "test_alpha": {
               "longrepr": null,
-              "nodeid": "pytest_examples/test_a.py::TestSuite::test_alpha",
+              "nodeid": "test_a.py::TestSuite::test_alpha",
               "short_id": "test_alpha",
               "status": "init"
             },
             "test_beta": {
               "longrepr": null,
-              "nodeid": "pytest_examples/test_a.py::TestSuite::test_beta",
+              "nodeid": "test_a.py::TestSuite::test_beta",
               "short_id": "test_beta",
               "status": "init"
             }
           },
           "environment_state": "inactive",
-          "nodeid": "pytest_examples/test_a.py::TestSuite",
+          "nodeid": "test_a.py::TestSuite",
           "short_id": "TestSuite",
           "status": "init"
         }
@@ -27,19 +27,19 @@
       "child_leaves": {
         "test_one": {
           "longrepr": null,
-          "nodeid": "pytest_examples/test_a.py::test_one",
+          "nodeid": "test_a.py::test_one",
           "short_id": "test_one",
           "status": "init"
         },
         "test_two": {
           "longrepr": null,
-          "nodeid": "pytest_examples/test_a.py::test_two",
+          "nodeid": "test_a.py::test_two",
           "short_id": "test_two",
           "status": "init"
         }
       },
       "environment_state": "inactive",
-      "nodeid": "pytest_examples/test_a.py",
+      "nodeid": "test_a.py",
       "short_id": "test_a.py",
       "status": "init"
     },
@@ -48,32 +48,32 @@
       "child_leaves": {
         "test_http_service": {
           "longrepr": null,
-          "nodeid": "pytest_examples/test_b.py::test_http_service",
+          "nodeid": "test_b.py::test_http_service",
           "short_id": "test_http_service",
           "status": "init"
         },
         "test_one": {
           "longrepr": null,
-          "nodeid": "pytest_examples/test_b.py::test_one",
+          "nodeid": "test_b.py::test_one",
           "short_id": "test_one",
           "status": "init"
         },
         "test_two": {
           "longrepr": null,
-          "nodeid": "pytest_examples/test_b.py::test_two",
+          "nodeid": "test_b.py::test_two",
           "short_id": "test_two",
           "status": "init"
         }
       },
       "environment_state": "inactive",
-      "nodeid": "pytest_examples/test_b.py",
+      "nodeid": "test_b.py",
       "short_id": "test_b.py",
       "status": "init"
     }
   },
   "child_leaves": {},
-  "environment_state": "stopped",
-  "nodeid": "pytest_examples",
+  "environment_state": "inactive",
+  "nodeid": "",
   "short_id": "pytest_examples",
   "status": "init"
 }

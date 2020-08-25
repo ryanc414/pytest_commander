@@ -94,8 +94,7 @@ class PyTestRunner:
     def _run_test(self, nodeid: str):
         result_queue: "multiprocessing.Queue[Union[result_tree.Node, TestReport, int]]" = multiprocessing.Queue()
         proc = multiprocessing.Process(
-            target=_run_test,
-            args=(nodeid, result_queue, self.result_tree.fspath, self._directory),
+            target=_run_test, args=(nodeid, result_queue, self._directory),
         )
         LOGGER.debug("running test %s", nodeid)
         proc.start()
@@ -107,6 +106,7 @@ class PyTestRunner:
 
         parent_node = self._get_parent_node(run_tree.nodeid)
         if parent_node is None:
+            run_tree.short_id = self.result_tree.short_id
             self.result_tree = run_tree
             self._node_index = result_tree.Indexer(run_tree)
         elif isinstance(run_tree, result_tree.BranchNode):
@@ -150,9 +150,10 @@ class PyTestRunner:
     def _get_parent_node(
         self, child_nodeid: nodeid.Nodeid
     ) -> Optional[result_tree.BranchNode]:
-        parent_nodeid = child_nodeid.parent
-        if not str(parent_nodeid):
+        if not child_nodeid.raw:
             return None
+
+        parent_nodeid = child_nodeid.parent
         parent_node = self._node_index[parent_nodeid]
         assert isinstance(parent_node, result_tree.BranchNode)
         return cast(result_tree.BranchNode, parent_node)
@@ -167,74 +168,46 @@ def _run_test(
     raw_test_nodeid: str,
     mp_queue: "multiprocessing.Queue[Union[result_tree.Node, TestReport, int]]",
     root_dir: str,
-    test_dir: str,
 ):
 
     test_nodeid = nodeid.Nodeid.from_string(raw_test_nodeid)
     parent_nodeid = test_nodeid.parent
-    plugin = ReporterPlugin(queue=mp_queue, collect_prefix=str(parent_nodeid))
-    pytest.main([test_nodeid.fspath], plugins=[plugin])
+    plugin = ReporterPlugin(queue=mp_queue)
+    full_path = os.path.join(root_dir, test_nodeid.fspath)
+    pytest.main([full_path, f"--rootdir={root_dir}"], plugins=[plugin])
     mp_queue.put(_DONE)
-
-
-def _get_full_path(nodeid: str, root_dir: str, test_dir: str) -> str:
-    if not nodeid:
-        return test_dir
-    return nodeid.replace("/", os.sep)
 
 
 def _init_result_tree(directory: str,) -> result_tree.BranchNode:
     """Collect the tests and initialise the result tree skeleton."""
-    node = _init_result_tree_recur(directory)
-    if len(node.child_branches) == 0 and len(node.child_leaves) == 0:
+    root_node = _collect_path(directory)
+    root_node.short_id = os.path.basename(directory)
+
+    if len(root_node.child_branches) == 0 and len(root_node.child_leaves) == 0:
         raise RuntimeError(f"failed to collect any tests from {directory}")
-    return node
-
-
-def _init_result_tree_recur(directory: str,) -> result_tree.BranchNode:
-    root_node = result_tree.BranchNode(
-        branch_nodeid=nodeid.Nodeid.from_string(directory.replace(os.sep, "/")),
-        env=environment.EnvironmentManager(directory),
-    )
-    with os.scandir(directory) as it:
-        for entry in it:
-            if entry.is_file() and entry.name.endswith(".py"):
-                node = _collect_file(entry.path, directory)
-            elif entry.is_dir():
-                node = _init_result_tree_recur(entry.path)
-            else:
-                continue
-
-            if isinstance(node, result_tree.LeafNode):
-                root_node.child_leaves[node.short_id] = node
-            elif list(node.iter_children()):
-                root_node.child_branches[node.short_id] = node
-
     return root_node
 
 
-def _collect_file(filepath: str, collect_prefix: str,) -> result_tree.BranchNode:
+def _collect_path(path: str) -> result_tree.BranchNode:
     reports_queue: "queue.Queue[Union[result_tree.Node, TestReport, int]]" = queue.Queue()
-    plugin = ReporterPlugin(queue=reports_queue, collect_prefix=collect_prefix)
-    ret = pytest.main(["--collect-only", filepath], plugins=[plugin])
+    plugin = ReporterPlugin(queue=reports_queue)
+    ret = pytest.main(["--collect-only", f"--rootdir={path}", path], plugins=[plugin])
     if ret != 0:
-        LOGGER.warning("Failed to collect tests from %s", filepath)
+        LOGGER.warning("Failed to collect tests from %s", path)
     res = reports_queue.get()
     if not isinstance(res, result_tree.BranchNode):
         raise TypeError(f"unexpected return from queue: {res}")
     return cast(result_tree.BranchNode, res)
 
 
-def _tree_from_collect_report(
-    report: CollectReport, collect_prefix: str,
-) -> result_tree.Node:
+def _tree_from_collect_report(report: CollectReport,) -> result_tree.Node:
     if report.outcome != "passed":
         node = result_tree.LeafNode(nodeid.Nodeid.from_string(report.failure_nodeid))
         node.status = result_tree.TestState(report.outcome)
         node.longrepr = report.longrepr
         return node
 
-    return result_tree.build_from_items(report.collected_items, collect_prefix)
+    return result_tree.build_from_items(report.collected_items)
 
 
 def _stop_all_environments(node: result_tree.BranchNode):
@@ -267,12 +240,9 @@ class ReporterPlugin:
     """PyTest plugin used to run tests and store results in our tree."""
 
     def __init__(
-        self,
-        queue: "queue.Queue[Union[result_tree.Node, TestReport, int]]",
-        collect_prefix: str,
+        self, queue: "queue.Queue[Union[result_tree.Node, TestReport, int]]",
     ):
         self._queue = queue
-        self._collect_prefix = collect_prefix
         self._last_collectreport: Optional[reports.CollectReport] = None
 
     def pytest_collectreport(self, report: reports.CollectReport):
@@ -289,7 +259,7 @@ class ReporterPlugin:
             failure_nodeid=collect_report.nodeid,
             collected_items=session.items,
         )
-        collected_tree = _tree_from_collect_report(report, self._collect_prefix)
+        collected_tree = _tree_from_collect_report(report)
         if collect_report.outcome != "passed":
             collected_tree.status = result_tree.TestState(collect_report.outcome)
         self._queue.put(collected_tree)

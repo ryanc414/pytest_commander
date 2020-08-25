@@ -21,18 +21,14 @@ ITEMS = [
 ]
 
 
-@pytest.mark.parametrize(
-    "prefix,filename",
-    [("path/to", "test_build_tree_path.json"), ("", "test_build_tree_root.json")],
-)
-def test_build_tree(prefix, filename):
-    tree = result_tree.build_from_items(ITEMS, prefix)
+def test_build_tree():
+    tree = result_tree.build_from_items(ITEMS)
     assert isinstance(tree, result_tree.BranchNode)
     serializer = result_tree.BranchNodeSchema()
     serialized_tree = serializer.dump(tree)
 
     json_filepath = os.path.join(
-        os.path.dirname(__file__), os.pardir, "test_data", filename
+        os.path.dirname(__file__), os.pardir, "test_data", "test_build_tree_root.json"
     )
 
     # Uncomment to update snapshot.

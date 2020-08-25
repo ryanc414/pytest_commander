@@ -103,6 +103,7 @@ class BranchNode(Node):
         env: Optional[environment.EnvironmentManager] = None,
     ):
         self._nodeid = branch_nodeid
+        self._short_id = None
         self.child_branches: Dict[str, BranchNode] = {}
         self.child_leaves: Dict[str, LeafNode] = {}
         self.environment = env
@@ -148,7 +149,13 @@ class BranchNode(Node):
     @property
     def short_id(self) -> str:
         """Short ID."""
+        if self._short_id:
+            return self._short_id
         return self.nodeid.short_id
+
+    @short_id.setter
+    def short_id(self, short_id):
+        self._short_id = short_id
 
     @property
     def fspath(self) -> str:
@@ -225,35 +232,34 @@ class LeafNode(Node):
         self._status = new_status
 
 
-def build_from_items(items: List, nodeid_prefix_raw: str) -> Node:
+def build_from_items(items: List) -> Node:
     """Build a result tree from the PyTest session object."""
     child_branches: Dict[str, BranchNode] = {}
     child_leaves: Dict[str, LeafNode] = {}
-    nodeid_prefix = nodeid.Nodeid.from_string(nodeid_prefix_raw)
-    num_prefix_frags = len(nodeid_prefix.fragments)
 
     for item in items:
-        assert item.nodeid.startswith(str(nodeid_prefix))
         item_nodeid = nodeid.Nodeid.from_string(item.nodeid)
-        nodeid_fragments = item_nodeid.fragments[num_prefix_frags:]
+        nodeid_fragments = item_nodeid.fragments
         leaf = LeafNode(nodeid.Nodeid.from_string(item.nodeid))
 
         if len(nodeid_fragments) > 1:
-            child = _ensure_branch(child_branches, nodeid_fragments, nodeid_prefix)
+            child = _ensure_branch(
+                child_branches, nodeid_fragments, nodeid.EMPTY_NODEID,
+            )
             child.child_leaves[leaf.short_id] = leaf
         else:
             assert len(nodeid_fragments) == 1
             child_leaves[leaf.short_id] = leaf
 
     root: Node
-    if len(child_branches) == 1:
-        assert len(child_leaves) == 0
-        root_branch = next(iter(child_branches.values()))
-        root = cast(Node, root_branch)
-    else:
-        assert len(child_branches) == 0, f"unexpected child branches: {child_branches}"
-        assert len(child_leaves) == 1
+    if len(child_branches) == 1 and len(child_leaves) == 0:
+        root = next(iter(child_branches.values()))
+    elif len(child_branches) == 0 and len(child_branches) == 1:
         root = next(iter(child_leaves.values()))
+    else:
+        root = BranchNode(branch_nodeid=nodeid.EMPTY_NODEID)
+        root.child_branches = child_branches
+        root.child_leaves = child_leaves
 
     return root
 
@@ -320,8 +326,7 @@ class Indexer:
 
     def __getitem__(self, item_nodeid: nodeid.Nodeid) -> Node:
         node = self._root
-        assert item_nodeid.fragments[0].val == str(node.nodeid)
-        for frag in item_nodeid.fragments[1:]:
+        for frag in item_nodeid:
             try:
                 node = node.child_branches[frag.val]
             except KeyError:
