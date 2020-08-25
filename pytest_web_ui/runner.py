@@ -110,7 +110,6 @@ class PyTestRunner:
         parent_node = self._get_parent_node(node.nodeid)
         if parent_node is None:
             assert isinstance(node, result_tree.BranchNode)
-            node.short_id = self.result_tree.short_id
             self.result_tree = node
             self._node_index = indexer
         elif isinstance(node, result_tree.BranchNode):
