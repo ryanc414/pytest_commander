@@ -1,9 +1,9 @@
-PyTest Web UI
--------------
+PyTest Commander
+----------------
 
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-A web app for controlling PyTest interactively. With it, you can explore your
+A UI for controlling PyTest interactively. With it, you can explore your
 test hierarchy (test packages/modules/classes/methods etc.), run tests at the
 click of a button and see the results presented in your web browser.
 
@@ -69,5 +69,15 @@ along with other dependencies installed to run your tests:
 pip install .
 pytest_commander /path/to/your/tests
 ```
+
+Renaming
+========
+
+Previously this project was called "pytest_web_ui". I felt that this name gave
+too much emphasis to the implementation detail of the UI being a web app,
+when it could easily have been implemented in some other way (e.g. as an
+electron app) and still serve the same purpose. I chose the name
+"pytest_commander" to reflect the true purpose of this project: giving a
+friendly and intuitive interface for developers to take command of their tests.
 
 Happy testing!
