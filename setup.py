@@ -8,7 +8,7 @@ def main():
 
     setuptools.setup(
         name="pytest_commander",
-        version="1.3.1",
+        version="2.0.0",
         author="Ryan Collingham",
         author_email="ryanc118@gmail.com",
         description="An interactive GUI test runner for PyTest",
@@ -27,6 +27,7 @@ def main():
             "marshmallow>=3.0.0",
             "marshmallow-enum",
             "flask>=1.0",
+            "flask_socketio",
             "eventlet",
             "requests",
         ],
