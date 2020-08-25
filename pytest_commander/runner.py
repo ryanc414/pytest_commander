@@ -55,12 +55,15 @@ class PyTestRunner:
         yield
         _stop_all_environments(self.result_tree)
 
-    def run_tests(self, nodeid: str):
+    def run_tests(self, raw_test_nodeid: str):
         """
         Run the test or tests for a given PyTest node. Updates the results tree with
         test reports as they are available.
         """
-        self._socketio.start_background_task(self._run_test, nodeid)
+        test_nodeid = nodeid.Nodeid.from_string(raw_test_nodeid)
+        self._node_index[test_nodeid].status = result_tree.TestState.RUNNING
+        self._send_update()
+        self._socketio.start_background_task(self._run_test, test_nodeid)
 
     def start_env(self, env_nodeid: str):
         """
@@ -91,7 +94,7 @@ class PyTestRunner:
         self._send_update()
 
     # TODO refactor
-    def _run_test(self, test_nodeid: str):
+    def _run_test(self, test_nodeid: nodeid.Nodeid):
         result_queue: "multiprocessing.Queue[Union[result_tree.Node, TestReport, int]]" = multiprocessing.Queue()
         proc = multiprocessing.Process(
             target=_run_test, args=(test_nodeid, result_queue, self._directory),
@@ -102,7 +105,7 @@ class PyTestRunner:
         run_tree = _get_queue_noblock(result_queue)
         LOGGER.debug("got run_tree %s", run_tree)
         indexer = result_tree.Indexer(run_tree)
-        node = indexer[nodeid.Nodeid.from_string(test_nodeid)]
+        node = indexer[test_nodeid]
 
         if node.status == result_tree.TestState.INIT:
             node.status = result_tree.TestState.RUNNING
@@ -168,12 +171,11 @@ class PyTestRunner:
 
 
 def _run_test(
-    raw_test_nodeid: str,
+    test_nodeid: nodeid.Nodeid,
     mp_queue: "multiprocessing.Queue[Union[result_tree.Node, TestReport, int]]",
     root_dir: str,
 ):
 
-    test_nodeid = nodeid.Nodeid.from_string(raw_test_nodeid)
     plugin = ReporterPlugin(queue=mp_queue, root_dir=root_dir)
     full_path = os.path.join(root_dir, test_nodeid.fspath)
     pytest.main([full_path, f"--rootdir={root_dir}"], plugins=[plugin])
