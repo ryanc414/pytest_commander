@@ -98,15 +98,19 @@ class BranchNode(Node):
     """
 
     def __init__(
-        self,
-        branch_nodeid: nodeid.Nodeid,
-        env: Optional[environment.EnvironmentManager] = None,
+        self, branch_nodeid: nodeid.Nodeid, root_dir: str,
     ):
         self._nodeid = branch_nodeid
         self._short_id = None
+        self._fspath = os.path.join(root_dir, branch_nodeid.fspath)
         self.child_branches: Dict[str, BranchNode] = {}
         self.child_leaves: Dict[str, LeafNode] = {}
-        self.environment = env
+
+        self.environment: Optional[environment.EnvironmentManager]
+        if os.path.isdir(self._fspath):
+            self.environment = environment.EnvironmentManager(self._fspath)
+        else:
+            self.environment = None
 
     def __eq__(self, other: object) -> bool:
         """Compare two BranchNodes for equality."""
@@ -160,7 +164,7 @@ class BranchNode(Node):
     @property
     def fspath(self) -> str:
         """Filesystem path this test node corresponds to."""
-        return self._nodeid.fspath
+        return self._fspath
 
     @property
     def status(self) -> TestState:
@@ -179,9 +183,10 @@ class LeafNode(Node):
     as such, represents a test function or method.
     """
 
-    def __init__(self, nodeid: nodeid.Nodeid):
-        self._nodeid = nodeid
+    def __init__(self, leaf_nodeid: nodeid.Nodeid, root_dir: str):
+        self._nodeid = leaf_nodeid
         self._status = TestState.INIT
+        self._fspath = os.path.join(root_dir, leaf_nodeid.fspath)
         self.longrepr = None
 
     def __eq__(self, other: object) -> bool:
@@ -207,7 +212,7 @@ class LeafNode(Node):
     @property
     def fspath(self) -> str:
         """Filesystem path this test node corresponds to."""
-        return self._nodeid.short_id
+        return self._fspath
 
     def pretty_format(self) -> str:
         """Output a pretty-formatted string of the whole tree, for debug purposes."""
@@ -232,7 +237,7 @@ class LeafNode(Node):
         self._status = new_status
 
 
-def build_from_items(items: List) -> Node:
+def build_from_items(items: List, root_dir: str) -> Node:
     """Build a result tree from the PyTest session object."""
     child_branches: Dict[str, BranchNode] = {}
     child_leaves: Dict[str, LeafNode] = {}
@@ -240,11 +245,11 @@ def build_from_items(items: List) -> Node:
     for item in items:
         item_nodeid = nodeid.Nodeid.from_string(item.nodeid)
         nodeid_fragments = item_nodeid.fragments
-        leaf = LeafNode(nodeid.Nodeid.from_string(item.nodeid))
+        leaf = LeafNode(nodeid.Nodeid.from_string(item.nodeid), root_dir)
 
         if len(nodeid_fragments) > 1:
             child = _ensure_branch(
-                child_branches, nodeid_fragments, nodeid.EMPTY_NODEID,
+                child_branches, nodeid_fragments, nodeid.EMPTY_NODEID, root_dir
             )
             child.child_leaves[leaf.short_id] = leaf
         else:
@@ -257,7 +262,7 @@ def build_from_items(items: List) -> Node:
     elif len(child_branches) == 0 and len(child_branches) == 1:
         root = next(iter(child_leaves.values()))
     else:
-        root = BranchNode(branch_nodeid=nodeid.EMPTY_NODEID)
+        root = BranchNode(branch_nodeid=nodeid.EMPTY_NODEID, root_dir=root_dir)
         root.child_branches = child_branches
         root.child_leaves = child_leaves
 
@@ -268,6 +273,7 @@ def _ensure_branch(
     child_branches: Dict[str, BranchNode],
     nodeid_fragments: List[nodeid.NodeidFragment],
     nodeid_prefix: nodeid.Nodeid,
+    root_dir: str,
 ) -> BranchNode:
     """
     Retrieve the branch node under the given root node that corresponds to the given
@@ -281,11 +287,13 @@ def _ensure_branch(
         child = child_branches[next_fragment.val]
         assert child.nodeid == child_nodeid
     except KeyError:
-        child = BranchNode(branch_nodeid=child_nodeid)
+        child = BranchNode(branch_nodeid=child_nodeid, root_dir=root_dir)
         child_branches[next_fragment.val] = child
 
     if len(rest_fragments) > 1:
-        return _ensure_branch(child.child_branches, rest_fragments, child_nodeid)
+        return _ensure_branch(
+            child.child_branches, rest_fragments, child_nodeid, root_dir
+        )
     elif len(rest_fragments) == 1:
         return child
     else:

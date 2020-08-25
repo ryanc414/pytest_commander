@@ -72,7 +72,7 @@
     }
   },
   "child_leaves": {},
-  "environment_state": "inactive",
+  "environment_state": "stopped",
   "nodeid": "",
   "short_id": "pytest_examples",
   "status": "init"

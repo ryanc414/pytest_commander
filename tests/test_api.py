@@ -35,8 +35,8 @@ def test_report_skeleton(clients):
     rsp_json = rsp.get_json()
 
     # Uncomment to update the serialization snapshot.
-    with open(json_filepath, "w") as f:
-        json.dump(rsp_json, f, indent=2)
+    # with open(json_filepath, "w") as f:
+    #     json.dump(rsp_json, f, indent=2)
 
     with open(json_filepath) as f:
         expected_serialization = json.load(f)

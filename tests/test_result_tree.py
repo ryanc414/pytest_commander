@@ -22,7 +22,7 @@ ITEMS = [
 
 
 def test_build_tree():
-    tree = result_tree.build_from_items(ITEMS)
+    tree = result_tree.build_from_items(ITEMS, "/root")
     assert isinstance(tree, result_tree.BranchNode)
     serializer = result_tree.BranchNodeSchema()
     serialized_tree = serializer.dump(tree)

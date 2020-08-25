@@ -171,8 +171,7 @@ def _run_test(
 ):
 
     test_nodeid = nodeid.Nodeid.from_string(raw_test_nodeid)
-    parent_nodeid = test_nodeid.parent
-    plugin = ReporterPlugin(queue=mp_queue)
+    plugin = ReporterPlugin(queue=mp_queue, root_dir=root_dir)
     full_path = os.path.join(root_dir, test_nodeid.fspath)
     pytest.main([full_path, f"--rootdir={root_dir}"], plugins=[plugin])
     mp_queue.put(_DONE)
@@ -185,12 +184,13 @@ def _init_result_tree(directory: str,) -> result_tree.BranchNode:
 
     if len(root_node.child_branches) == 0 and len(root_node.child_leaves) == 0:
         raise RuntimeError(f"failed to collect any tests from {directory}")
+
     return root_node
 
 
 def _collect_path(path: str) -> result_tree.BranchNode:
     reports_queue: "queue.Queue[Union[result_tree.Node, TestReport, int]]" = queue.Queue()
-    plugin = ReporterPlugin(queue=reports_queue)
+    plugin = ReporterPlugin(queue=reports_queue, root_dir=path)
     ret = pytest.main(["--collect-only", f"--rootdir={path}", path], plugins=[plugin])
     if ret != 0:
         LOGGER.warning("Failed to collect tests from %s", path)
@@ -200,14 +200,16 @@ def _collect_path(path: str) -> result_tree.BranchNode:
     return cast(result_tree.BranchNode, res)
 
 
-def _tree_from_collect_report(report: CollectReport,) -> result_tree.Node:
+def _tree_from_collect_report(report: CollectReport, root_dir: str) -> result_tree.Node:
     if report.outcome != "passed":
-        node = result_tree.LeafNode(nodeid.Nodeid.from_string(report.failure_nodeid))
+        node = result_tree.LeafNode(
+            nodeid.Nodeid.from_string(report.failure_nodeid), root_dir
+        )
         node.status = result_tree.TestState(report.outcome)
         node.longrepr = report.longrepr
         return node
 
-    return result_tree.build_from_items(report.collected_items)
+    return result_tree.build_from_items(report.collected_items, root_dir)
 
 
 def _stop_all_environments(node: result_tree.BranchNode):
@@ -240,10 +242,13 @@ class ReporterPlugin:
     """PyTest plugin used to run tests and store results in our tree."""
 
     def __init__(
-        self, queue: "queue.Queue[Union[result_tree.Node, TestReport, int]]",
+        self,
+        queue: "queue.Queue[Union[result_tree.Node, TestReport, int]]",
+        root_dir: str,
     ):
         self._queue = queue
         self._last_collectreport: Optional[reports.CollectReport] = None
+        self._root_dir = root_dir
 
     def pytest_collectreport(self, report: reports.CollectReport):
         """Hook called after a test has been collected."""
@@ -259,7 +264,7 @@ class ReporterPlugin:
             failure_nodeid=collect_report.nodeid,
             collected_items=session.items,
         )
-        collected_tree = _tree_from_collect_report(report)
+        collected_tree = _tree_from_collect_report(report, self._root_dir)
         if collect_report.outcome != "passed":
             collected_tree.status = result_tree.TestState(collect_report.outcome)
         self._queue.put(collected_tree)
