@@ -98,10 +98,13 @@ class BranchNode(Node):
     """
 
     def __init__(
-        self, branch_nodeid: nodeid.Nodeid, root_dir: str,
+        self,
+        branch_nodeid: nodeid.Nodeid,
+        root_dir: str,
+        short_id: Optional[str] = None,
     ):
         self._nodeid = branch_nodeid
-        self._short_id = None
+        self._short_id = short_id
         self._fspath = os.path.join(root_dir, branch_nodeid.fspath)
         self.child_branches: Dict[str, BranchNode] = {}
         self.child_leaves: Dict[str, LeafNode] = {}
@@ -156,10 +159,6 @@ class BranchNode(Node):
         if self._short_id:
             return self._short_id
         return self.nodeid.short_id
-
-    @short_id.setter
-    def short_id(self, short_id):
-        self._short_id = short_id
 
     @property
     def fspath(self) -> str:
@@ -256,10 +255,12 @@ def build_from_items(items: List, root_dir: str) -> Node:
             assert len(nodeid_fragments) == 1
             child_leaves[leaf.short_id] = leaf
 
-    root = BranchNode(branch_nodeid=nodeid.EMPTY_NODEID, root_dir=root_dir)
+    short_id = os.path.basename(root_dir.rstrip(os.sep))
+    root = BranchNode(
+        branch_nodeid=nodeid.EMPTY_NODEID, root_dir=root_dir, short_id=short_id
+    )
     root.child_branches = child_branches
     root.child_leaves = child_leaves
-    root.short_id = os.path.basename(root_dir.rstrip(os.sep))
 
     return root
 
