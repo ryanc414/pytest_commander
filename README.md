@@ -7,7 +7,7 @@ A web app for controlling PyTest interactively. With it, you can explore your
 test hierarchy (test packages/modules/classes/methods etc.), run tests at the
 click of a button and see the results presented in your web browser.
 
-![Screenshot](https://raw.githubusercontent.com/ryanc414/pytest_web_ui/master/img/screenshot1.png)
+![Screenshot](https://raw.githubusercontent.com/ryanc414/pytest_commander/master/img/screenshot1.png)
 
 Features
 ========
@@ -35,8 +35,8 @@ Quickstart
 Install and get started running your own PyTest tests:
 
 ```
-pip install pytest-web-ui
-pytest_web_ui /path/to/your/tests
+pip install pytest-commander
+pytest_commander /path/to/your/tests
 ```
 
 I recommend installing into an activated
@@ -46,7 +46,7 @@ are installed into the same virtual environment.
 
 When you run with default options, the web app to browse and run tests should be
 opened automatically in your default browser. To view full docs for the
-command-line parameters, run `pytest_web_ui --help`.
+command-line parameters, run `pytest_commander --help`.
 
 Build from source
 =================
@@ -56,8 +56,8 @@ you must ensure you have installed [pipenv](https://pipenv.pypa.io/en/latest/)
 and [npm](https://www.npmjs.com/get-npm).
 
 ```
-git clone https://github.com/ryanc414/pytest_web_ui.git
-cd pytest_web_ui
+git clone https://github.com/ryanc414/pytest_commander.git
+cd pytest_commander
 python build.py
 python test.py
 ```
@@ -67,7 +67,7 @@ along with other dependencies installed to run your tests:
 
 ```
 pip install .
-pytest_web_ui /path/to/your/tests
+pytest_commander /path/to/your/tests
 ```
 
 Happy testing!

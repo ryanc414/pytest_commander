@@ -18,9 +18,9 @@ import pytest  # type: ignore
 from _pytest import reports  # type: ignore
 from _pytest import nodes  # type: ignore
 
-from pytest_web_ui import result_tree
-from pytest_web_ui import environment
-from pytest_web_ui import nodeid
+from pytest_commander import result_tree
+from pytest_commander import environment
+from pytest_commander import nodeid
 
 LOGGER = logging.getLogger(__name__)
 _DONE = 0xDEAD

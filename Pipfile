@@ -17,4 +17,4 @@ python_version = "3.8"
 allow_prereleases = true
 
 [packages]
-pytest-web-ui = {editable = true,path = "."}
+pytest-commander = {editable = true,path = "."}

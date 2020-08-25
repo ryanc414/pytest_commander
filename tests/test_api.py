@@ -6,7 +6,7 @@ import os
 import eventlet
 import pytest
 
-from pytest_web_ui import api
+from pytest_commander import api
 
 EXAMPLES_DIR = os.path.relpath(
     os.path.join(os.path.dirname(__file__), os.pardir, "pytest_examples")

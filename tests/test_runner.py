@@ -5,9 +5,9 @@ from unittest import mock
 
 import pytest
 
-from pytest_web_ui import runner
-from pytest_web_ui import result_tree
-from pytest_web_ui import nodeid
+from pytest_commander import runner
+from pytest_commander import result_tree
+from pytest_commander import nodeid
 
 EXAMPLES_DIR = os.path.relpath(
     os.path.join(os.path.dirname(__file__), os.pardir, "pytest_examples")

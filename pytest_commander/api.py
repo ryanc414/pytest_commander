@@ -8,9 +8,9 @@ import flask
 import flask_socketio  # type: ignore
 import pkg_resources
 
-from pytest_web_ui import runner
-from pytest_web_ui import result_tree
-from pytest_web_ui import environment
+from pytest_commander import runner
+from pytest_commander import result_tree
+from pytest_commander import environment
 
 LOGGER = logging.getLogger(__name__)
 

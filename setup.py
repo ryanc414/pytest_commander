@@ -7,14 +7,14 @@ def main():
         long_description = f.read()
 
     setuptools.setup(
-        name="pytest_web_ui",
+        name="pytest_commander",
         version="1.3.1",
         author="Ryan Collingham",
         author_email="ryanc118@gmail.com",
-        description="An interactive web UI test runner for PyTest",
+        description="An interactive GUI test runner for PyTest",
         long_description=long_description,
         long_description_content_type="text/markdown",
-        url="https://github.com/ryanc414/pytest_web_ui",
+        url="https://github.com/ryanc414/pytest_commander",
         packages=setuptools.find_packages(),
         classifiers=[
             "Programming Language :: Python :: 3",
@@ -32,7 +32,7 @@ def main():
         ],
         include_package_data=True,
         entry_points={
-            "console_scripts": ["pytest_web_ui = pytest_web_ui.__main__:main"]
+            "console_scripts": ["pytest_commander = pytest_commander.__main__:main"]
         },
     )
 

@@ -15,7 +15,7 @@ def main():
 
     print("Running mypy type checker...")
     subprocess.check_call(
-        [pipenv_exe, "run", "mypy", os.path.join(REPO_ROOT, "pytest_web_ui")]
+        [pipenv_exe, "run", "mypy", os.path.join(REPO_ROOT, "pytest_commander")]
     )
 
     print("Running python unit tests...")

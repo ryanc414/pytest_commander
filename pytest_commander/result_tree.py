@@ -17,8 +17,8 @@ from marshmallow import fields
 import marshmallow_enum  # type: ignore
 from _pytest import nodes  # type: ignore
 
-from pytest_web_ui import environment
-from pytest_web_ui import nodeid
+from pytest_commander import environment
+from pytest_commander import nodeid
 
 LOGGER = logging.getLogger(__name__)
 

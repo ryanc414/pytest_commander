@@ -12,7 +12,7 @@ import subprocess
 import sys
 
 
-WEB_CLIENT_DIR = os.path.join(os.path.dirname(__file__), "pytest_web_ui", "web_client")
+WEB_CLIENT_DIR = os.path.join(os.path.dirname(__file__), "pytest_commander", "web_client")
 
 
 def main():

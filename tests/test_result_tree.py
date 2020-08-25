@@ -6,7 +6,7 @@ import os
 
 import pytest
 
-from pytest_web_ui import result_tree
+from pytest_commander import result_tree
 
 SessionItem = collections.namedtuple("SessionItem", ["nodeid"])
 

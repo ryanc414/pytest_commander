@@ -8,7 +8,7 @@ import webbrowser
 import time
 
 import requests
-from pytest_web_ui import api
+from pytest_commander import api
 
 LOGGER = logging.getLogger(__name__)
 
