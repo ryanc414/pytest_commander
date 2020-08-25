@@ -256,15 +256,10 @@ def build_from_items(items: List, root_dir: str) -> Node:
             assert len(nodeid_fragments) == 1
             child_leaves[leaf.short_id] = leaf
 
-    root: Node
-    if len(child_branches) == 1 and len(child_leaves) == 0:
-        root = next(iter(child_branches.values()))
-    elif len(child_branches) == 0 and len(child_branches) == 1:
-        root = next(iter(child_leaves.values()))
-    else:
-        root = BranchNode(branch_nodeid=nodeid.EMPTY_NODEID, root_dir=root_dir)
-        root.child_branches = child_branches
-        root.child_leaves = child_leaves
+    root = BranchNode(branch_nodeid=nodeid.EMPTY_NODEID, root_dir=root_dir)
+    root.child_branches = child_branches
+    root.child_leaves = child_leaves
+    root.short_id = os.path.basename(root_dir.rstrip(os.sep))
 
     return root
 

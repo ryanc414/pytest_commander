@@ -59,8 +59,8 @@ def test_run_test(clients):
     )
 
     # Uncomment to update expected JSON.
-    with open(json_filepath, "w") as f:
-        json.dump(total_rcvd, f, indent=2)
+    # with open(json_filepath, "w") as f:
+    #     json.dump(total_rcvd, f, indent=2)
 
     with open(json_filepath) as f:
         expected_rcvd = json.load(f)

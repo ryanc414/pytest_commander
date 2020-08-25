@@ -91,35 +91,39 @@ class PyTestRunner:
         self._send_update()
 
     # TODO refactor
-    def _run_test(self, nodeid: str):
+    def _run_test(self, test_nodeid: str):
         result_queue: "multiprocessing.Queue[Union[result_tree.Node, TestReport, int]]" = multiprocessing.Queue()
         proc = multiprocessing.Process(
-            target=_run_test, args=(nodeid, result_queue, self._directory),
+            target=_run_test, args=(test_nodeid, result_queue, self._directory),
         )
         LOGGER.debug("running test %s", nodeid)
         proc.start()
 
         run_tree = _get_queue_noblock(result_queue)
         LOGGER.debug("got run_tree %s", run_tree)
-        if run_tree.status == result_tree.TestState.INIT:
-            run_tree.status = result_tree.TestState.RUNNING
+        indexer = result_tree.Indexer(run_tree)
+        node = indexer[nodeid.Nodeid.from_string(test_nodeid)]
 
-        parent_node = self._get_parent_node(run_tree.nodeid)
+        if node.status == result_tree.TestState.INIT:
+            node.status = result_tree.TestState.RUNNING
+
+        parent_node = self._get_parent_node(node.nodeid)
         if parent_node is None:
-            run_tree.short_id = self.result_tree.short_id
-            self.result_tree = run_tree
-            self._node_index = result_tree.Indexer(run_tree)
-        elif isinstance(run_tree, result_tree.BranchNode):
-            parent_node.child_branches[run_tree.short_id] = run_tree
+            assert isinstance(node, result_tree.BranchNode)
+            node.short_id = self.result_tree.short_id
+            self.result_tree = node
+            self._node_index = indexer
+        elif isinstance(node, result_tree.BranchNode):
+            parent_node.child_branches[node.short_id] = node
             try:
-                del parent_node.child_leaves[run_tree.short_id]
+                del parent_node.child_leaves[node.short_id]
             except KeyError:
                 pass
         else:
-            assert isinstance(run_tree, result_tree.LeafNode)
-            parent_node.child_leaves[run_tree.short_id] = run_tree
+            assert isinstance(node, result_tree.LeafNode)
+            parent_node.child_leaves[node.short_id] = node
             try:
-                del parent_node.child_branches[run_tree.short_id]
+                del parent_node.child_branches[node.short_id]
             except KeyError:
                 pass
 
@@ -180,7 +184,6 @@ def _run_test(
 def _init_result_tree(directory: str,) -> result_tree.BranchNode:
     """Collect the tests and initialise the result tree skeleton."""
     root_node = _collect_path(directory)
-    root_node.short_id = os.path.basename(directory.rstrip(os.sep))
 
     if len(root_node.child_branches) == 0 and len(root_node.child_leaves) == 0:
         raise RuntimeError(f"failed to collect any tests from {directory}")
