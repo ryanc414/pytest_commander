@@ -7,6 +7,7 @@ import sys
 import webbrowser
 import time
 
+import eventlet  # type: ignore
 import requests
 from pytest_commander import api
 
@@ -32,7 +33,7 @@ def main():
     if not args.no_browse:
         threading.Thread(target=open_webbrowser, args=(address,)).start()
 
-    with test_runner.environment_manager():
+    with test_runner:
         socketio.run(app, host=args.host, port=args.port, debug=args.debug)
 
 

@@ -10,17 +10,21 @@ import subprocess
 from typing import Tuple, Dict, Callable, List, Union, Optional, cast
 import pprint
 import collections
+import time
+import traceback
 
 import eventlet  # type: ignore
 import flask_socketio  # type: ignore
-
 import pytest  # type: ignore
 from _pytest import reports  # type: ignore
 from _pytest import nodes  # type: ignore
+from watchdog import events  # type: ignore
+from watchdog import observers  # type: ignore
 
 from pytest_commander import result_tree
 from pytest_commander import environment
 from pytest_commander import nodeid
+from pytest_commander import watcher
 
 LOGGER = logging.getLogger(__name__)
 _DONE = 0xDEAD
@@ -46,14 +50,25 @@ class PyTestRunner:
         self._branch_schema = result_tree.BranchNodeSchema()
         self._leaf_schema = result_tree.LeafNodeSchema()
         self._node_index = result_tree.Indexer(self.result_tree)
+        self._watchdog_proc: Optional[multiprocessing.Process] = None
 
-    @contextlib.contextmanager
-    def environment_manager(self):
+    def __enter__(self):
+        """Context manager entry: start filesystem observer."""
+        queue = multiprocessing.Queue()
+        self._watchdog_proc = multiprocessing.Process(
+            target=watcher.watch_filesystem, args=(self._directory, queue)
+        )
+        self._watchdog_proc.start()
+        self._socketio.start_background_task(self._watch_fs_events, queue)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
         """
-        Context manager to ensure all test environments are closed on shutdown.
+        Context manager exit: stop filesystem observer and any running
+        environments.
         """
-        yield
         _stop_all_environments(self.result_tree)
+        self._watchdog_proc.terminate()
+        self._watchdog_proc.join()
 
     def run_tests(self, raw_test_nodeid: str):
         """
@@ -110,25 +125,7 @@ class PyTestRunner:
         if node.status == result_tree.TestState.INIT:
             node.status = result_tree.TestState.RUNNING
 
-        parent_node = self._get_parent_node(node.nodeid)
-        if parent_node is None:
-            assert isinstance(node, result_tree.BranchNode)
-            self.result_tree = node
-            self._node_index = indexer
-        elif isinstance(node, result_tree.BranchNode):
-            parent_node.child_branches[node.short_id] = node
-            try:
-                del parent_node.child_leaves[node.short_id]
-            except KeyError:
-                pass
-        else:
-            assert isinstance(node, result_tree.LeafNode)
-            parent_node.child_leaves[node.short_id] = node
-            try:
-                del parent_node.child_branches[node.short_id]
-            except KeyError:
-                pass
-
+        self._insert_node(node)
         self._send_update()
 
         eventlet.sleep()
@@ -168,6 +165,43 @@ class PyTestRunner:
         LOGGER.debug("sending update")
         serialized_tree = self._branch_schema.dump(self.result_tree)
         self._socketio.emit("update", serialized_tree)
+
+    def _reload_path(self, path: str):
+        node = _collect_path(path)
+        self._insert_node(node)
+        self._send_update()
+
+    def _insert_node(self, node: result_tree.Node):
+        parent_node = self._get_parent_node(node.nodeid)
+        if parent_node is None:
+            assert isinstance(node, result_tree.BranchNode)
+            self.result_tree = node
+            self._node_index = result_tree.Indexer(node)
+        elif isinstance(node, result_tree.BranchNode):
+            parent_node.child_branches[node.short_id] = node
+            try:
+                del parent_node.child_leaves[node.short_id]
+            except KeyError:
+                pass
+        else:
+            assert isinstance(node, result_tree.LeafNode)
+            parent_node.child_leaves[node.short_id] = node
+            try:
+                del parent_node.child_branches[node.short_id]
+            except KeyError:
+                pass
+
+    def _watch_fs_events(self, queue: multiprocessing.Queue):
+        while True:
+            event = _get_queue_noblock(queue)
+
+            if isinstance(event, events.FileCreatedEvent):
+                self._handle_file_created(event.src_path)
+            else:
+                LOGGER.critical("*** dropping filesystem event: %s", event)
+
+    def _handle_file_created(filepath: str):
+        raise NotImplementedError
 
 
 def _run_test(
@@ -286,3 +320,4 @@ class ReporterPlugin:
                 outcome=report.outcome, longrepr=report.longrepr, nodeid=report.nodeid,
             )
         )
+
