@@ -167,9 +167,11 @@ class PyTestRunner:
         self._socketio.emit("update", serialized_tree)
 
     def _reload_path(self, path: str):
-        node = _collect_path(path)
+        root_node = _collect_path(path, self._directory)
+        updated_nodeid = nodeid.Nodeid.from_path(path, self._directory)
+        LOGGER.critical("*** updated_nodeid = %s", updated_nodeid)
+        node = result_tree.Indexer(root_node)[updated_nodeid]
         self._insert_node(node)
-        self._send_update()
 
     def _insert_node(self, node: result_tree.Node):
         parent_node = self._get_parent_node(node.nodeid)
@@ -200,8 +202,9 @@ class PyTestRunner:
             else:
                 LOGGER.critical("*** dropping filesystem event: %s", event)
 
-    def _handle_file_created(filepath: str):
-        raise NotImplementedError
+    def _handle_file_created(self, filepath: str):
+        self._reload_path(filepath)
+        self._send_update()
 
 
 def _run_test(
@@ -209,7 +212,6 @@ def _run_test(
     mp_queue: "multiprocessing.Queue[Union[result_tree.Node, TestReport, int]]",
     root_dir: str,
 ):
-
     plugin = ReporterPlugin(queue=mp_queue, root_dir=root_dir)
     full_path = os.path.join(root_dir, test_nodeid.fspath)
     pytest.main([full_path, f"--rootdir={root_dir}"], plugins=[plugin])
@@ -218,7 +220,7 @@ def _run_test(
 
 def _init_result_tree(directory: str,) -> result_tree.BranchNode:
     """Collect the tests and initialise the result tree skeleton."""
-    root_node = _collect_path(directory)
+    root_node = _collect_path(directory, directory)
 
     if len(root_node.child_branches) == 0 and len(root_node.child_leaves) == 0:
         raise RuntimeError(f"failed to collect any tests from {directory}")
@@ -226,10 +228,17 @@ def _init_result_tree(directory: str,) -> result_tree.BranchNode:
     return root_node
 
 
-def _collect_path(path: str) -> result_tree.BranchNode:
+def _collect_path(path: str, root_dir: str) -> result_tree.BranchNode:
+    if not path.startswith(root_dir):
+        raise ValueError(
+            f"path {path} does not appear to be within root dir {root_dir}"
+        )
+
     reports_queue: "queue.Queue[Union[result_tree.Node, TestReport, int]]" = queue.Queue()
-    plugin = ReporterPlugin(queue=reports_queue, root_dir=path)
-    ret = pytest.main(["--collect-only", f"--rootdir={path}", path], plugins=[plugin])
+    plugin = ReporterPlugin(queue=reports_queue, root_dir=root_dir)
+    ret = pytest.main(
+        ["--collect-only", f"--rootdir={root_dir}", path], plugins=[plugin]
+    )
     if ret != 0:
         LOGGER.warning("Failed to collect tests from %s", path)
     res = reports_queue.get()
