@@ -30,6 +30,7 @@ def main():
             "flask_socketio",
             "eventlet",
             "requests",
+            "watchdog>=0.10",
         ],
         include_package_data=True,
         entry_points={

@@ -10,17 +10,21 @@ import subprocess
 from typing import Tuple, Dict, Callable, List, Union, Optional, cast
 import pprint
 import collections
+import time
+import traceback
 
 import eventlet  # type: ignore
 import flask_socketio  # type: ignore
-
 import pytest  # type: ignore
 from _pytest import reports  # type: ignore
 from _pytest import nodes  # type: ignore
+from watchdog import events  # type: ignore
+from watchdog import observers  # type: ignore
 
 from pytest_commander import result_tree
 from pytest_commander import environment
 from pytest_commander import nodeid
+from pytest_commander import watcher
 
 LOGGER = logging.getLogger(__name__)
 _DONE = 0xDEAD
@@ -38,7 +42,7 @@ class PyTestRunner:
     """Owns the test result tree and handles running tests and updating the results."""
 
     def __init__(
-        self, directory: str, socketio: flask_socketio.SocketIO,
+        self, directory: str, socketio: flask_socketio.SocketIO, watch_filesystem: bool
     ):
         self._directory = directory
         self.result_tree = _init_result_tree(directory)
@@ -46,14 +50,28 @@ class PyTestRunner:
         self._branch_schema = result_tree.BranchNodeSchema()
         self._leaf_schema = result_tree.LeafNodeSchema()
         self._node_index = result_tree.Indexer(self.result_tree)
+        self._watch_filesystem = watch_filesystem
+        self._watchdog_proc: Optional[multiprocessing.Process] = None
 
-    @contextlib.contextmanager
-    def environment_manager(self):
+    def __enter__(self):
+        """Context manager entry: start filesystem observer."""
+        if self._watch_filesystem:
+            queue = multiprocessing.Queue()
+            self._watchdog_proc = multiprocessing.Process(
+                target=watcher.watch_filesystem, args=(self._directory, queue)
+            )
+            self._watchdog_proc.start()
+            self._socketio.start_background_task(self._watch_fs_events, queue)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
         """
-        Context manager to ensure all test environments are closed on shutdown.
+        Context manager exit: stop filesystem observer and any running
+        environments.
         """
-        yield
         _stop_all_environments(self.result_tree)
+        if self._watchdog_proc is not None:
+            self._watchdog_proc.terminate()
+            self._watchdog_proc.join()
 
     def run_tests(self, raw_test_nodeid: str):
         """
@@ -93,7 +111,6 @@ class PyTestRunner:
         node.environment.stop()
         self._send_update()
 
-    # TODO refactor
     def _run_test(self, test_nodeid: nodeid.Nodeid):
         result_queue: "multiprocessing.Queue[Union[result_tree.Node, TestReport, int]]" = multiprocessing.Queue()
         proc = multiprocessing.Process(
@@ -104,30 +121,11 @@ class PyTestRunner:
 
         run_tree = _get_queue_noblock(result_queue)
         LOGGER.debug("got run_tree %s", run_tree)
-        indexer = result_tree.Indexer(run_tree)
-        node = indexer[test_nodeid]
 
+        self.result_tree.merge(run_tree)
+        node = self._node_index[test_nodeid]
         if node.status == result_tree.TestState.INIT:
             node.status = result_tree.TestState.RUNNING
-
-        parent_node = self._get_parent_node(node.nodeid)
-        if parent_node is None:
-            assert isinstance(node, result_tree.BranchNode)
-            self.result_tree = node
-            self._node_index = indexer
-        elif isinstance(node, result_tree.BranchNode):
-            parent_node.child_branches[node.short_id] = node
-            try:
-                del parent_node.child_leaves[node.short_id]
-            except KeyError:
-                pass
-        else:
-            assert isinstance(node, result_tree.LeafNode)
-            parent_node.child_leaves[node.short_id] = node
-            try:
-                del parent_node.child_branches[node.short_id]
-            except KeyError:
-                pass
 
         self._send_update()
 
@@ -169,13 +167,102 @@ class PyTestRunner:
         serialized_tree = self._branch_schema.dump(self.result_tree)
         self._socketio.emit("update", serialized_tree)
 
+    def _watch_fs_events(self, queue: multiprocessing.Queue):
+        while True:
+            event = _get_queue_noblock(queue)
+            try:
+                self._handle_fs_event(event)
+            except Exception:
+                LOGGER.exception("unexpected error while handling filesystem event")
+
+    def _handle_fs_event(self, event: events.FileSystemEvent):
+        if _should_drop_fs_event(event):
+            return
+
+        if isinstance(event, (events.FileCreatedEvent, events.FileModifiedEvent)):
+            self._handle_file_update(event.src_path)
+        elif isinstance(event, events.FileDeletedEvent):
+            self._handle_file_deleted(event.src_path)
+        elif isinstance(event, events.FileMovedEvent):
+            self._handle_file_moved(event.src_path, event.dest_path)
+        else:
+            LOGGER.debug("dropping filesystem event: %s", event)
+
+    def _handle_file_update(self, filepath: str):
+        """Handle a file being created or modified."""
+        root_node = _collect_path(filepath, self._directory)
+        self.result_tree.merge(root_node)
+        self._send_update()
+
+    def _handle_file_deleted(self, filepath: str):
+        """Handle a file being deleted."""
+        deleted_nodeid = nodeid.Nodeid.from_path(filepath, self._directory)
+        try:
+            self._pop_node(deleted_nodeid)
+        except KeyError:
+            LOGGER.debug("could not find node in tree: %s", deleted_nodeid)
+            return
+        self._send_update()
+
+    def _handle_file_moved(self, src_path: str, dest_path: str):
+        """Handle a file being moved."""
+        orig_nodeid = nodeid.Nodeid.from_path(src_path, self._directory)
+        try:
+            self._pop_node(orig_nodeid)
+        except KeyError:
+            LOGGER.debug("could not find node in tree: %s", orig_nodeid)
+            return
+        collect_root = _collect_path(dest_path, self._directory)
+        self.result_tree.merge(collect_root)
+        self._send_update()
+
+    def _pop_node(self, pop_nodeid: nodeid.Nodeid) -> result_tree.Node:
+        """Remove and returns a node with a given nodeid from the tree."""
+        parent_node = self._node_index[pop_nodeid.parent]
+        if not isinstance(parent_node, result_tree.BranchNode):
+            raise TypeError(f"parent node is not a branch: {parent_node}")
+        short_id = pop_nodeid.short_id
+
+        node: result_tree.Node
+        try:
+            node = parent_node.child_branches.pop(short_id)
+        except KeyError:
+            LOGGER.exception("could not pop branch %s", pop_nodeid)
+            node = parent_node.child_leaves.pop(short_id)
+
+        self._remove_if_dangling(parent_node)
+        return node
+
+    def _remove_if_dangling(self, node: result_tree.BranchNode):
+        """Remove a node if it has no children. Recurse up the tree."""
+        if not node.child_branches and not node.child_leaves:
+            parent_node = self._get_parent_node(node.nodeid)
+            if parent_node is None:
+                return
+            del parent_node.child_branches[node.short_id]
+            self._remove_if_dangling(parent_node)
+
+
+def _should_drop_fs_event(event: events.FileSystemEvent) -> bool:
+    if not event.src_path.endswith(".py"):
+        LOGGER.debug("dropping event not related to a .py file: %s", event)
+        return True
+
+    if any(
+        path_el.startswith(".") or path_el == "__pycache__"
+        for path_el in event.src_path.split(os.sep)
+    ):
+        LOGGER.debug("dropping event for hidden file: %s", event)
+        return True
+
+    return False
+
 
 def _run_test(
     test_nodeid: nodeid.Nodeid,
     mp_queue: "multiprocessing.Queue[Union[result_tree.Node, TestReport, int]]",
     root_dir: str,
 ):
-
     plugin = ReporterPlugin(queue=mp_queue, root_dir=root_dir)
     full_path = os.path.join(root_dir, test_nodeid.fspath)
     pytest.main([full_path, f"--rootdir={root_dir}"], plugins=[plugin])
@@ -184,7 +271,7 @@ def _run_test(
 
 def _init_result_tree(directory: str,) -> result_tree.BranchNode:
     """Collect the tests and initialise the result tree skeleton."""
-    root_node = _collect_path(directory)
+    root_node = _collect_path(directory, directory)
 
     if len(root_node.child_branches) == 0 and len(root_node.child_leaves) == 0:
         raise RuntimeError(f"failed to collect any tests from {directory}")
@@ -192,10 +279,17 @@ def _init_result_tree(directory: str,) -> result_tree.BranchNode:
     return root_node
 
 
-def _collect_path(path: str) -> result_tree.BranchNode:
+def _collect_path(path: str, root_dir: str) -> result_tree.BranchNode:
+    if not path.startswith(root_dir):
+        raise ValueError(
+            f"path {path} does not appear to be within root dir {root_dir}"
+        )
+
     reports_queue: "queue.Queue[Union[result_tree.Node, TestReport, int]]" = queue.Queue()
-    plugin = ReporterPlugin(queue=reports_queue, root_dir=path)
-    ret = pytest.main(["--collect-only", f"--rootdir={path}", path], plugins=[plugin])
+    plugin = ReporterPlugin(queue=reports_queue, root_dir=root_dir)
+    ret = pytest.main(
+        ["--collect-only", f"--rootdir={root_dir}", path], plugins=[plugin]
+    )
     if ret != 0:
         LOGGER.warning("Failed to collect tests from %s", path)
     res = reports_queue.get()
@@ -206,12 +300,11 @@ def _collect_path(path: str) -> result_tree.BranchNode:
 
 def _tree_from_collect_report(report: CollectReport, root_dir: str) -> result_tree.Node:
     if report.outcome != "passed":
-        node = result_tree.LeafNode(
-            nodeid.Nodeid.from_string(report.failure_nodeid), root_dir
-        )
-        node.status = result_tree.TestState(report.outcome)
-        node.longrepr = report.longrepr
-        return node
+        failure_nodeid = nodeid.Nodeid.from_string(report.failure_nodeid)
+        leaf_node = result_tree.LeafNode(failure_nodeid, root_dir)
+        leaf_node.status = result_tree.TestState(report.outcome)
+        leaf_node.longrepr = report.longrepr
+        return result_tree.build_from_leaf(leaf_node, root_dir)
 
     return result_tree.build_from_items(report.collected_items, root_dir)
 

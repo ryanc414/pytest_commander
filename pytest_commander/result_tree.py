@@ -175,6 +175,25 @@ class BranchNode(Node):
         for child in self.iter_children():
             child.status = new_status
 
+    def merge(self, other: BranchNode):
+        """
+        Merge another tree into this one. In case of collisions, the other
+        tree's child nodes take precedence.
+        """
+        for child_branch in other.child_branches.values():
+            if child_branch.short_id in self.child_leaves:
+                del self.child_leaves[child_branch.short_id]
+
+            if child_branch.short_id in self.child_branches:
+                self.child_branches[child_branch.short_id].merge(child_branch)
+            else:
+                self.child_branches[child_branch.short_id] = child_branch
+
+        for leaf_id in other.child_leaves:
+            if leaf_id in self.child_branches:
+                del self.child_branches[leaf_id]
+        self.child_leaves.update(other.child_leaves)
+
 
 class LeafNode(Node):
     """
@@ -236,37 +255,28 @@ class LeafNode(Node):
         self._status = new_status
 
 
-def build_from_items(items: List, root_dir: str) -> Node:
+def build_from_items(items: List, root_dir: str) -> BranchNode:
     """Build a result tree from the PyTest session object."""
-    child_branches: Dict[str, BranchNode] = {}
-    child_leaves: Dict[str, LeafNode] = {}
+    short_id = os.path.basename(root_dir.rstrip(os.sep))
+    root_branch = BranchNode(
+        branch_nodeid=nodeid.EMPTY_NODEID, root_dir=root_dir, short_id=short_id
+    )
 
     for item in items:
         item_nodeid = nodeid.Nodeid.from_string(item.nodeid)
         nodeid_fragments = item_nodeid.fragments
         leaf = LeafNode(nodeid.Nodeid.from_string(item.nodeid), root_dir)
 
-        if len(nodeid_fragments) > 1:
-            child = _ensure_branch(
-                child_branches, nodeid_fragments, nodeid.EMPTY_NODEID, root_dir
-            )
-            child.child_leaves[leaf.short_id] = leaf
-        else:
-            assert len(nodeid_fragments) == 1
-            child_leaves[leaf.short_id] = leaf
+        child = _ensure_branch(
+            root_branch, nodeid_fragments, nodeid.EMPTY_NODEID, root_dir
+        )
+        child.child_leaves[leaf.short_id] = leaf
 
-    short_id = os.path.basename(root_dir.rstrip(os.sep))
-    root = BranchNode(
-        branch_nodeid=nodeid.EMPTY_NODEID, root_dir=root_dir, short_id=short_id
-    )
-    root.child_branches = child_branches
-    root.child_leaves = child_leaves
-
-    return root
+    return root_branch
 
 
 def _ensure_branch(
-    child_branches: Dict[str, BranchNode],
+    root_branch: BranchNode,
     nodeid_fragments: List[nodeid.NodeidFragment],
     nodeid_prefix: nodeid.Nodeid,
     root_dir: str,
@@ -277,23 +287,34 @@ def _ensure_branch(
     automatically created.
     """
     next_fragment, rest_fragments = nodeid_fragments[0], nodeid_fragments[1:]
+
+    if not rest_fragments:
+        return root_branch
+
     child_nodeid = nodeid_prefix.append(next_fragment)
 
     try:
-        child = child_branches[next_fragment.val]
+        child = root_branch.child_branches[next_fragment.val]
         assert child.nodeid == child_nodeid
     except KeyError:
         child = BranchNode(branch_nodeid=child_nodeid, root_dir=root_dir)
-        child_branches[next_fragment.val] = child
+        root_branch.child_branches[next_fragment.val] = child
 
-    if len(rest_fragments) > 1:
-        return _ensure_branch(
-            child.child_branches, rest_fragments, child_nodeid, root_dir
-        )
-    elif len(rest_fragments) == 1:
-        return child
-    else:
-        raise RuntimeError
+    return _ensure_branch(child, rest_fragments, child_nodeid, root_dir)
+
+
+def build_from_leaf(node: LeafNode, root_dir: str) -> BranchNode:
+    """Build a full tree from a single node, which may belong anywhere in the tree."""
+    short_id = os.path.basename(root_dir.rstrip(os.sep))
+    root = BranchNode(
+        branch_nodeid=nodeid.EMPTY_NODEID, root_dir=root_dir, short_id=short_id
+    )
+    parent_branch = _ensure_branch(
+        root, node.nodeid.fragments, nodeid.EMPTY_NODEID, root_dir
+    )
+    parent_branch.child_leaves[node.short_id] = node
+
+    return root
 
 
 class NodeSchema(marshmallow.Schema):

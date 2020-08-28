@@ -48,6 +48,15 @@ class Nodeid:
         raw_nodeid = "".join(str_components)
         return cls(raw_nodeid, fragments)
 
+    @classmethod
+    def from_path(cls, path: str, root_dir: str) -> Nodeid:
+        if not path.startswith(root_dir):
+            raise ValueError(
+                f"path {path} does not appear to be within root dir {root_dir}"
+            )
+
+        return cls.from_string(path[len(root_dir) + 1 :])
+
     def __iter__(self):
         return iter(self._fragments)
 

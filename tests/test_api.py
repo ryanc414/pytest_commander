@@ -16,7 +16,7 @@ EXAMPLES_DIR = os.path.relpath(
 @pytest.fixture
 def clients():
     """Setup and yield flask and socketIO test clients."""
-    app, socketio, _ = api.build_app(EXAMPLES_DIR)
+    app, socketio, _ = api.build_app(EXAMPLES_DIR, False)
     app.config["TESTING"] = True
     with app.test_client() as client:
         socket_client = socketio.test_client(app, flask_test_client=client)
@@ -49,7 +49,7 @@ def test_run_test(clients):
     socket_client.emit("run test", "test_a.py::test_one")
 
     total_rcvd = []
-    while len(total_rcvd) < 2:
+    while len(total_rcvd) < 3:
         rcvd = socket_client.get_received()
         eventlet.sleep(0.1)
         total_rcvd.extend(rcvd)
