@@ -108,7 +108,6 @@ class PyTestRunner:
         node.environment.stop()
         self._send_update()
 
-    # TODO refactor
     def _run_test(self, test_nodeid: nodeid.Nodeid):
         result_queue: "multiprocessing.Queue[Union[result_tree.Node, TestReport, int]]" = multiprocessing.Queue()
         proc = multiprocessing.Process(
@@ -119,13 +118,12 @@ class PyTestRunner:
 
         run_tree = _get_queue_noblock(result_queue)
         LOGGER.debug("got run_tree %s", run_tree)
-        indexer = result_tree.Indexer(run_tree)
-        node = indexer[test_nodeid]
 
+        self.result_tree.merge(run_tree)
+        node = self._node_index[test_nodeid]
         if node.status == result_tree.TestState.INIT:
             node.status = result_tree.TestState.RUNNING
 
-        self._insert_node(node)
         self._send_update()
 
         eventlet.sleep()
@@ -166,33 +164,6 @@ class PyTestRunner:
         serialized_tree = self._branch_schema.dump(self.result_tree)
         self._socketio.emit("update", serialized_tree)
 
-    def _reload_path(self, path: str):
-        root_node = _collect_path(path, self._directory)
-        updated_nodeid = nodeid.Nodeid.from_path(path, self._directory)
-        LOGGER.critical("*** updated_nodeid = %s", updated_nodeid)
-        node = result_tree.Indexer(root_node)[updated_nodeid]
-        self._insert_node(node)
-
-    def _insert_node(self, node: result_tree.Node):
-        parent_node = self._get_parent_node(node.nodeid)
-        if parent_node is None:
-            assert isinstance(node, result_tree.BranchNode)
-            self.result_tree = node
-            self._node_index = result_tree.Indexer(node)
-        elif isinstance(node, result_tree.BranchNode):
-            parent_node.child_branches[node.short_id] = node
-            try:
-                del parent_node.child_leaves[node.short_id]
-            except KeyError:
-                pass
-        else:
-            assert isinstance(node, result_tree.LeafNode)
-            parent_node.child_leaves[node.short_id] = node
-            try:
-                del parent_node.child_branches[node.short_id]
-            except KeyError:
-                pass
-
     def _watch_fs_events(self, queue: multiprocessing.Queue):
         while True:
             event = _get_queue_noblock(queue)
@@ -203,7 +174,9 @@ class PyTestRunner:
                 LOGGER.critical("*** dropping filesystem event: %s", event)
 
     def _handle_file_created(self, filepath: str):
-        self._reload_path(filepath)
+        """Handle a new file being created."""
+        root_node = _collect_path(filepath, self._directory)
+        self.result_tree.merge(root_node)
         self._send_update()
 
 
@@ -249,12 +222,12 @@ def _collect_path(path: str, root_dir: str) -> result_tree.BranchNode:
 
 def _tree_from_collect_report(report: CollectReport, root_dir: str) -> result_tree.Node:
     if report.outcome != "passed":
-        node = result_tree.LeafNode(
-            nodeid.Nodeid.from_string(report.failure_nodeid), root_dir
+        return result_tree.build_from_collect_fail(
+            nodeid.Nodeid.from_string(report.failure_nodeid),
+            report.outcome,
+            report.longrepr,
+            root_dir,
         )
-        node.status = result_tree.TestState(report.outcome)
-        node.longrepr = report.longrepr
-        return node
 
     return result_tree.build_from_items(report.collected_items, root_dir)
 
@@ -329,4 +302,3 @@ class ReporterPlugin:
                 outcome=report.outcome, longrepr=report.longrepr, nodeid=report.nodeid,
             )
         )
-
