@@ -262,7 +262,8 @@ def _collect_path(path: str, root_dir: str) -> result_tree.BranchNode:
 
 def _tree_from_collect_report(report: CollectReport, root_dir: str) -> result_tree.Node:
     if report.outcome != "passed":
-        leaf_node = result_tree.LeafNode(report.failure_nodeid, root_dir)
+        failure_nodeid = nodeid.Nodeid.from_string(report.failure_nodeid)
+        leaf_node = result_tree.LeafNode(failure_nodeid, root_dir)
         leaf_node.status = result_tree.TestState(report.outcome)
         leaf_node.longrepr = report.longrepr
         return result_tree.build_from_node(leaf_node, root_dir)
