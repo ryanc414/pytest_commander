@@ -167,15 +167,23 @@ class PyTestRunner:
     def _watch_fs_events(self, queue: multiprocessing.Queue):
         while True:
             event = _get_queue_noblock(queue)
+            try:
+                self._handle_fs_event(event)
+            except Exception:
+                LOGGER.exception("unexpected error while handling filesystem event")
 
-            if isinstance(event, (events.FileCreatedEvent, events.FileModifiedEvent)):
-                self._handle_file_update(event.src_path)
-            elif isinstance(event, events.FileDeletedEvent):
-                self._handle_file_deleted(event.src_path)
-            elif isinstance(event, events.FileMovedEvent):
-                self._handle_file_moved(event.src_path, event.dest_path)
-            else:
-                LOGGER.critical("*** dropping filesystem event: %s", event)
+    def _handle_fs_event(self, event: events.FileSystemEvent):
+        if _should_drop_fs_event(event):
+            return
+
+        if isinstance(event, (events.FileCreatedEvent, events.FileModifiedEvent)):
+            self._handle_file_update(event.src_path)
+        elif isinstance(event, events.FileDeletedEvent):
+            self._handle_file_deleted(event.src_path)
+        elif isinstance(event, events.FileMovedEvent):
+            self._handle_file_moved(event.src_path, event.dest_path)
+        else:
+            LOGGER.debug("dropping filesystem event: %s", event)
 
     def _handle_file_update(self, filepath: str):
         """Handle a file being created or modified."""
@@ -197,7 +205,7 @@ class PyTestRunner:
         """Handle a file being moved."""
         orig_nodeid = nodeid.Nodeid.from_path(src_path, self._directory)
         try:
-            node = self._pop_node(orig_nodeid)
+            self._pop_node(orig_nodeid)
         except KeyError:
             LOGGER.debug("could not find node in tree: %s", orig_nodeid)
             return
@@ -218,6 +226,21 @@ class PyTestRunner:
         """Insert a single node into the result tree."""
         merge_root = result_tree.build_from_node(node, self._directory)
         self.result_tree.merge(merge_root)
+
+
+def _should_drop_fs_event(event: events.FileSystemEvent) -> bool:
+    if not event.src_path.endswith(".py"):
+        LOGGER.debug("dropping event not related to a .py file: %s", event)
+        return True
+
+    if any(
+        path_el.startswith(".") or path_el == "__pycache__"
+        for path_el in event.src_path.split(os.sep)
+    ):
+        LOGGER.debug("dropping event for hidden file: %s", event)
+        return True
+
+    return False
 
 
 def _run_test(
