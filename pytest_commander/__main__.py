@@ -26,7 +26,7 @@ def main():
     log_level = logging.DEBUG if args.debug else logging.CRITICAL
     logging.basicConfig(level=log_level)
 
-    app, socketio, test_runner = api.build_app(args.directory)
+    app, socketio, test_runner = api.build_app(args.directory, args.no_watch)
     address = f"http://{display_host(args.host)}:{args.port}/"
     LOGGER.critical(f"View in your browser at {address}")
 
@@ -74,6 +74,11 @@ def parse_args() -> argparse.Namespace:
         "--no-browse",
         action="store_true",
         help="Do not automatically open a web browser to view the UI",
+    )
+    parser.add_argument(
+        "--no-watch",
+        action="store_true",
+        help="Disable watching for filesystem changes in the background",
     )
 
     return parser.parse_args()

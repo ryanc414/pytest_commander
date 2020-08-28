@@ -303,7 +303,7 @@ def _ensure_branch(
     return _ensure_branch(child, rest_fragments, child_nodeid, root_dir)
 
 
-def build_from_node(node: Node, root_dir: str) -> BranchNode:
+def build_from_leaf(node: LeafNode, root_dir: str) -> BranchNode:
     """Build a full tree from a single node, which may belong anywhere in the tree."""
     short_id = os.path.basename(root_dir.rstrip(os.sep))
     root = BranchNode(

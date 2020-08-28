@@ -42,7 +42,7 @@ class PyTestRunner:
     """Owns the test result tree and handles running tests and updating the results."""
 
     def __init__(
-        self, directory: str, socketio: flask_socketio.SocketIO,
+        self, directory: str, socketio: flask_socketio.SocketIO, watch_filesystem: bool
     ):
         self._directory = directory
         self.result_tree = _init_result_tree(directory)
@@ -50,16 +50,18 @@ class PyTestRunner:
         self._branch_schema = result_tree.BranchNodeSchema()
         self._leaf_schema = result_tree.LeafNodeSchema()
         self._node_index = result_tree.Indexer(self.result_tree)
+        self._watch_filesystem = watch_filesystem
         self._watchdog_proc: Optional[multiprocessing.Process] = None
 
     def __enter__(self):
         """Context manager entry: start filesystem observer."""
-        queue = multiprocessing.Queue()
-        self._watchdog_proc = multiprocessing.Process(
-            target=watcher.watch_filesystem, args=(self._directory, queue)
-        )
-        self._watchdog_proc.start()
-        self._socketio.start_background_task(self._watch_fs_events, queue)
+        if self._watch_filesystem:
+            queue = multiprocessing.Queue()
+            self._watchdog_proc = multiprocessing.Process(
+                target=watcher.watch_filesystem, args=(self._directory, queue)
+            )
+            self._watchdog_proc.start()
+            self._socketio.start_background_task(self._watch_fs_events, queue)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """
@@ -67,8 +69,9 @@ class PyTestRunner:
         environments.
         """
         _stop_all_environments(self.result_tree)
-        self._watchdog_proc.terminate()
-        self._watchdog_proc.join()
+        if self._watchdog_proc is not None:
+            self._watchdog_proc.terminate()
+            self._watchdog_proc.join()
 
     def run_tests(self, raw_test_nodeid: str):
         """
@@ -216,7 +219,11 @@ class PyTestRunner:
     def _pop_node(self, pop_nodeid: nodeid.Nodeid) -> result_tree.Node:
         """Remove and returns a node with a given nodeid from the tree."""
         parent_node = self._node_index[pop_nodeid.parent]
+        if not isinstance(parent_node, result_tree.BranchNode):
+            raise TypeError(f"parent node is not a branch: {parent_node}")
         short_id = pop_nodeid.short_id
+
+        node: result_tree.Node
         try:
             node = parent_node.child_branches.pop(short_id)
         except KeyError:
@@ -224,6 +231,7 @@ class PyTestRunner:
             node = parent_node.child_leaves.pop(short_id)
 
         self._remove_if_dangling(parent_node)
+        return node
 
     def _remove_if_dangling(self, node: result_tree.BranchNode):
         """Remove a node if it has no children. Recurse up the tree."""
@@ -233,11 +241,6 @@ class PyTestRunner:
                 return
             del parent_node.child_branches[node.short_id]
             self._remove_if_dangling(parent_node)
-
-    def _insert_node(self, node: result_tree.Node):
-        """Insert a single node into the result tree."""
-        merge_root = result_tree.build_from_node(node, self._directory)
-        self.result_tree.merge(merge_root)
 
 
 def _should_drop_fs_event(event: events.FileSystemEvent) -> bool:
@@ -301,7 +304,7 @@ def _tree_from_collect_report(report: CollectReport, root_dir: str) -> result_tr
         leaf_node = result_tree.LeafNode(failure_nodeid, root_dir)
         leaf_node.status = result_tree.TestState(report.outcome)
         leaf_node.longrepr = report.longrepr
-        return result_tree.build_from_node(leaf_node, root_dir)
+        return result_tree.build_from_leaf(leaf_node, root_dir)
 
     return result_tree.build_from_items(report.collected_items, root_dir)
 
