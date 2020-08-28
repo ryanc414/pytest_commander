@@ -303,21 +303,16 @@ def _ensure_branch(
     return _ensure_branch(child, rest_fragments, child_nodeid, root_dir)
 
 
-def build_from_collect_fail(
-    failure_nodeid: nodeid.Nodeid, outcome: str, longrepr: str, root_dir: str
-) -> BranchNode:
+def build_from_node(node: Node, root_dir: str) -> BranchNode:
+    """Build a full tree from a single node, which may belong anywhere in the tree."""
     short_id = os.path.basename(root_dir.rstrip(os.sep))
     root = BranchNode(
         branch_nodeid=nodeid.EMPTY_NODEID, root_dir=root_dir, short_id=short_id
     )
-    print(f"*** failure_nodeid = {failure_nodeid}")
     parent_branch = _ensure_branch(
-        root, failure_nodeid.fragments, nodeid.EMPTY_NODEID, root_dir
+        root, node.nodeid.fragments, nodeid.EMPTY_NODEID, root_dir
     )
-    child_leaf = LeafNode(failure_nodeid, root_dir)
-    child_leaf.status = TestState(outcome)
-    child_leaf.longrepr = longrepr
-    parent_branch.child_leaves[failure_nodeid.short_id] = child_leaf
+    parent_branch.child_leaves[node.short_id] = node
 
     return root
 

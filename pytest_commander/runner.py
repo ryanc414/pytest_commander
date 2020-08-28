@@ -172,6 +172,8 @@ class PyTestRunner:
                 self._handle_file_update(event.src_path)
             elif isinstance(event, events.FileDeletedEvent):
                 self._handle_file_deleted(event.src_path)
+            elif isinstance(event, events.FileMovedEvent):
+                self._handle_file_moved(event.src_path, event.dest_path)
             else:
                 LOGGER.critical("*** dropping filesystem event: %s", event)
 
@@ -185,27 +187,37 @@ class PyTestRunner:
         """Handle a file being deleted."""
         deleted_nodeid = nodeid.Nodeid.from_path(filepath, self._directory)
         try:
-            parent_node = self._node_index[deleted_nodeid.parent]
+            self._pop_node(deleted_nodeid)
         except KeyError:
-            LOGGER.exception(
-                "could not find node in tree for deleted file %s", filepath
-            )
+            LOGGER.debug("could not find node in tree: %s", deleted_nodeid)
             return
-
-        short_id = deleted_nodeid.short_id
-        try:
-            del parent_node.child_branches[short_id]
-        except KeyError:
-            LOGGER.exception("could not delete branch %s", deleted_nodeid)
-            pass
-
-        try:
-            del parent_node.child_leaves[short_id]
-        except KeyError:
-            LOGGER.exception("could not delete leaf %s", deleted_nodeid)
-            pass
-
         self._send_update()
+
+    def _handle_file_moved(self, src_path: str, dest_path: str):
+        """Handle a file being moved."""
+        orig_nodeid = nodeid.Nodeid.from_path(src_path, self._directory)
+        try:
+            node = self._pop_node(orig_nodeid)
+        except KeyError:
+            LOGGER.debug("could not find node in tree: %s", orig_nodeid)
+            return
+        collect_root = _collect_path(dest_path, self._directory)
+        self.result_tree.merge(collect_root)
+        self._send_update()
+
+    def _pop_node(self, pop_nodeid: nodeid.Nodeid) -> result_tree.Node:
+        parent_node = self._node_index[pop_nodeid.parent]
+        short_id = pop_nodeid.short_id
+        try:
+            return parent_node.child_branches.pop(short_id)
+        except KeyError:
+            LOGGER.exception("could not pop branch %s", pop_nodeid)
+            return parent_node.child_leaves.pop(short_id)
+
+    def _insert_node(self, node: result_tree.Node):
+        """Insert a single node into the result tree."""
+        merge_root = result_tree.build_from_node(node, self._directory)
+        self.result_tree.merge(merge_root)
 
 
 def _run_test(
@@ -250,12 +262,10 @@ def _collect_path(path: str, root_dir: str) -> result_tree.BranchNode:
 
 def _tree_from_collect_report(report: CollectReport, root_dir: str) -> result_tree.Node:
     if report.outcome != "passed":
-        return result_tree.build_from_collect_fail(
-            nodeid.Nodeid.from_string(report.failure_nodeid),
-            report.outcome,
-            report.longrepr,
-            root_dir,
-        )
+        leaf_node = result_tree.LeafNode(report.failure_nodeid, root_dir)
+        leaf_node.status = result_tree.TestState(report.outcome)
+        leaf_node.longrepr = report.longrepr
+        return result_tree.build_from_node(leaf_node, root_dir)
 
     return result_tree.build_from_items(report.collected_items, root_dir)
 
