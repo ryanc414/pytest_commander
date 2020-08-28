@@ -168,15 +168,15 @@ class PyTestRunner:
         while True:
             event = _get_queue_noblock(queue)
 
-            if isinstance(event, events.FileCreatedEvent):
-                self._handle_file_created(event.src_path)
+            if isinstance(event, (events.FileCreatedEvent, events.FileModifiedEvent)):
+                self._handle_file_update(event.src_path)
             elif isinstance(event, events.FileDeletedEvent):
                 self._handle_file_deleted(event.src_path)
             else:
                 LOGGER.critical("*** dropping filesystem event: %s", event)
 
-    def _handle_file_created(self, filepath: str):
-        """Handle a new file being created."""
+    def _handle_file_update(self, filepath: str):
+        """Handle a file being created or modified."""
         root_node = _collect_path(filepath, self._directory)
         self.result_tree.merge(root_node)
         self._send_update()
