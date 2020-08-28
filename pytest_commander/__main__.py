@@ -26,7 +26,7 @@ def main():
     log_level = logging.DEBUG if args.debug else logging.CRITICAL
     logging.basicConfig(level=log_level)
 
-    app, socketio, test_runner = api.build_app(args.directory, args.no_watch)
+    app, socketio, test_runner = api.build_app(args.directory, not args.no_watch)
     address = f"http://{display_host(args.host)}:{args.port}/"
     LOGGER.critical(f"View in your browser at {address}")
 
