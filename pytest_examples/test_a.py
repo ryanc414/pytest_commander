@@ -9,7 +9,7 @@ def myfix():
 
 
 def test_one():
-    asser True
+    assert True
 
 
 def test_two(myfix):

@@ -170,6 +170,8 @@ class PyTestRunner:
 
             if isinstance(event, events.FileCreatedEvent):
                 self._handle_file_created(event.src_path)
+            elif isinstance(event, events.FileDeletedEvent):
+                self._handle_file_deleted(event.src_path)
             else:
                 LOGGER.critical("*** dropping filesystem event: %s", event)
 
@@ -177,6 +179,32 @@ class PyTestRunner:
         """Handle a new file being created."""
         root_node = _collect_path(filepath, self._directory)
         self.result_tree.merge(root_node)
+        self._send_update()
+
+    def _handle_file_deleted(self, filepath: str):
+        """Handle a file being deleted."""
+        deleted_nodeid = nodeid.Nodeid.from_path(filepath, self._directory)
+        try:
+            parent_node = self._node_index[deleted_nodeid.parent]
+        except KeyError:
+            LOGGER.exception(
+                "could not find node in tree for deleted file %s", filepath
+            )
+            return
+
+        short_id = deleted_nodeid.short_id
+        try:
+            del parent_node.child_branches[short_id]
+        except KeyError:
+            LOGGER.exception("could not delete branch %s", deleted_nodeid)
+            pass
+
+        try:
+            del parent_node.child_leaves[short_id]
+        except KeyError:
+            LOGGER.exception("could not delete leaf %s", deleted_nodeid)
+            pass
+
         self._send_update()
 
 
