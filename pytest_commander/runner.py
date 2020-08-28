@@ -214,13 +214,25 @@ class PyTestRunner:
         self._send_update()
 
     def _pop_node(self, pop_nodeid: nodeid.Nodeid) -> result_tree.Node:
+        """Remove and returns a node with a given nodeid from the tree."""
         parent_node = self._node_index[pop_nodeid.parent]
         short_id = pop_nodeid.short_id
         try:
-            return parent_node.child_branches.pop(short_id)
+            node = parent_node.child_branches.pop(short_id)
         except KeyError:
             LOGGER.exception("could not pop branch %s", pop_nodeid)
-            return parent_node.child_leaves.pop(short_id)
+            node = parent_node.child_leaves.pop(short_id)
+
+        self._remove_if_dangling(parent_node)
+
+    def _remove_if_dangling(self, node: result_tree.BranchNode):
+        """Remove a node if it has no children. Recurse up the tree."""
+        if not node.child_branches and not node.child_leaves:
+            parent_node = self._get_parent_node(node.nodeid)
+            if parent_node is None:
+                return
+            del parent_node.child_branches[node.short_id]
+            self._remove_if_dangling(parent_node)
 
     def _insert_node(self, node: result_tree.Node):
         """Insert a single node into the result tree."""
