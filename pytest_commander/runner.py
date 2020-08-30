@@ -24,18 +24,11 @@ from watchdog import observers  # type: ignore
 from pytest_commander import result_tree
 from pytest_commander import environment
 from pytest_commander import nodeid
+from pytest_commander import plugin
 from pytest_commander import watcher
 
 LOGGER = logging.getLogger(__name__)
-_DONE = 0xDEAD
 _ACTIVE_LOOP_SLEEP = 0.1  # seconds
-
-
-CollectReport = collections.namedtuple(
-    "CollectReport", ["outcome", "longrepr", "collected_items", "failure_nodeid"]
-)
-
-TestReport = collections.namedtuple("TestReport", ["outcome", "longrepr", "nodeid"])
 
 
 class PyTestRunner:
@@ -112,9 +105,9 @@ class PyTestRunner:
         self._send_update()
 
     def _run_test(self, test_nodeid: nodeid.Nodeid):
-        result_queue: "multiprocessing.Queue[Union[result_tree.Node, TestReport, int]]" = multiprocessing.Queue()
+        result_queue: "multiprocessing.Queue[Union[result_tree.Node, plugin.TestReport, int]]" = multiprocessing.Queue()
         proc = multiprocessing.Process(
-            target=_run_test, args=(test_nodeid, result_queue, self._directory),
+            target=plugin.run_test, args=(test_nodeid, result_queue, self._directory),
         )
         LOGGER.debug("running test %s", nodeid)
         proc.start()
@@ -133,7 +126,7 @@ class PyTestRunner:
 
         while True:
             val = _get_queue_noblock(result_queue)
-            if val == _DONE:
+            if val == plugin.DONE:
                 LOGGER.debug("DONE received, breaking")
                 break
             LOGGER.debug("adding test report %s", val)
@@ -190,7 +183,7 @@ class PyTestRunner:
 
     def _handle_file_update(self, filepath: str):
         """Handle a file being created or modified."""
-        root_node = _collect_path(filepath, self._directory)
+        root_node = plugin.collect_path(filepath, self._directory)
         self.result_tree.merge(root_node)
         self._send_update()
 
@@ -212,7 +205,7 @@ class PyTestRunner:
         except KeyError:
             LOGGER.debug("could not find node in tree: %s", orig_nodeid)
             return
-        collect_root = _collect_path(dest_path, self._directory)
+        collect_root = plugin.collect_path(dest_path, self._directory)
         self.result_tree.merge(collect_root)
         self._send_update()
 
@@ -258,55 +251,14 @@ def _should_drop_fs_event(event: events.FileSystemEvent) -> bool:
     return False
 
 
-def _run_test(
-    test_nodeid: nodeid.Nodeid,
-    mp_queue: "multiprocessing.Queue[Union[result_tree.Node, TestReport, int]]",
-    root_dir: str,
-):
-    plugin = ReporterPlugin(queue=mp_queue, root_dir=root_dir)
-    full_path = os.path.join(root_dir, test_nodeid.fspath)
-    pytest.main([full_path, f"--rootdir={root_dir}"], plugins=[plugin])
-    mp_queue.put(_DONE)
-
-
 def _init_result_tree(directory: str,) -> result_tree.BranchNode:
     """Collect the tests and initialise the result tree skeleton."""
-    root_node = _collect_path(directory, directory)
+    root_node = plugin.collect_path(directory, directory)
 
     if len(root_node.child_branches) == 0 and len(root_node.child_leaves) == 0:
         raise RuntimeError(f"failed to collect any tests from {directory}")
 
     return root_node
-
-
-def _collect_path(path: str, root_dir: str) -> result_tree.BranchNode:
-    if not path.startswith(root_dir):
-        raise ValueError(
-            f"path {path} does not appear to be within root dir {root_dir}"
-        )
-
-    reports_queue: "queue.Queue[Union[result_tree.Node, TestReport, int]]" = queue.Queue()
-    plugin = ReporterPlugin(queue=reports_queue, root_dir=root_dir)
-    ret = pytest.main(
-        ["--collect-only", f"--rootdir={root_dir}", path], plugins=[plugin]
-    )
-    if ret != 0:
-        LOGGER.warning("Failed to collect tests from %s", path)
-    res = reports_queue.get()
-    if not isinstance(res, result_tree.BranchNode):
-        raise TypeError(f"unexpected return from queue: {res}")
-    return cast(result_tree.BranchNode, res)
-
-
-def _tree_from_collect_report(report: CollectReport, root_dir: str) -> result_tree.Node:
-    if report.outcome != "passed":
-        failure_nodeid = nodeid.Nodeid.from_string(report.failure_nodeid)
-        leaf_node = result_tree.LeafNode(failure_nodeid, root_dir)
-        leaf_node.status = result_tree.TestState(report.outcome)
-        leaf_node.longrepr = report.longrepr
-        return result_tree.build_from_leaf(leaf_node, root_dir)
-
-    return result_tree.build_from_items(report.collected_items, root_dir)
 
 
 def _stop_all_environments(node: result_tree.BranchNode):
@@ -334,48 +286,3 @@ def _get_queue_noblock(q: multiprocessing.Queue):
         except queue.Empty:
             eventlet.sleep(_ACTIVE_LOOP_SLEEP)
 
-
-class ReporterPlugin:
-    """PyTest plugin used to run tests and store results in our tree."""
-
-    def __init__(
-        self,
-        queue: "queue.Queue[Union[result_tree.Node, TestReport, int]]",
-        root_dir: str,
-    ):
-        self._queue = queue
-        self._last_collectreport: Optional[reports.CollectReport] = None
-        self._root_dir = root_dir
-
-    def pytest_collectreport(self, report: reports.CollectReport):
-        """Hook called after a test has been collected."""
-        self._last_collectreport = report
-
-    def pytest_collection_finish(self, session: pytest.Session):
-        if self._last_collectreport is None:
-            raise RuntimeError("no collect reports found")
-        collect_report = cast(reports.CollectReport, self._last_collectreport)
-        report = CollectReport(
-            outcome=collect_report.outcome,
-            longrepr=collect_report.longrepr,
-            failure_nodeid=collect_report.nodeid,
-            collected_items=session.items,
-        )
-        collected_tree = _tree_from_collect_report(report, self._root_dir)
-        if collect_report.outcome != "passed":
-            collected_tree.status = result_tree.TestState(collect_report.outcome)
-        self._queue.put(collected_tree)
-
-    def pytest_runtest_logreport(self, report: reports.TestReport):
-        """
-        Hook called after a new test report is ready. Also called for
-        setup/teardown.
-        """
-        # Ignore reports for successful setup/teardown.
-        if report.outcome == "passed" and report.when != "call":
-            return
-        self._queue.put(
-            TestReport(
-                outcome=report.outcome, longrepr=report.longrepr, nodeid=report.nodeid,
-            )
-        )
