@@ -12,7 +12,9 @@ import subprocess
 import sys
 
 
-WEB_CLIENT_DIR = os.path.join(os.path.dirname(__file__), "pytest_commander", "web_client")
+WEB_CLIENT_DIR = os.path.join(
+    os.path.dirname(__file__), "pytest_commander", "web_client"
+)
 
 
 def main():
@@ -30,12 +32,6 @@ def main():
     print("Building UI...")
     subprocess.check_call([npm_exe, "install"], cwd=WEB_CLIENT_DIR)
     subprocess.check_call([npm_exe, "run", "build"], cwd=WEB_CLIENT_DIR)
-
-    print("Installing python dependencies...")
-    subprocess.check_call([pipenv_exe, "install", "--dev"])
-
-    print("Building distributions...")
-    subprocess.check_call([sys.executable, "setup.py", "sdist", "bdist_wheel"])
 
     print("Done! Find source archive and wheel under dist/")
     print("Run tests with: $ python test.py")
