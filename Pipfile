@@ -9,6 +9,7 @@ mypy = "*"
 pylint = "*"
 twine = "*"
 icecream = "*"
+snapshottest = "*"
 
 [requires]
 python_version = "3.8"

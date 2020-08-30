@@ -21,22 +21,12 @@ ITEMS = [
 ]
 
 
-def test_build_tree():
+def test_build_tree(snapshot):
     tree = result_tree.build_from_items(ITEMS, "/root")
     assert isinstance(tree, result_tree.BranchNode)
+    assert tree.status == result_tree.TestState.INIT
+    assert tree.short_id == "root"
+    assert str(tree.nodeid) == ""
     serializer = result_tree.BranchNodeSchema()
     serialized_tree = serializer.dump(tree)
-
-    json_filepath = os.path.join(
-        os.path.dirname(__file__), os.pardir, "test_data", "test_build_tree_root.json"
-    )
-
-    # Uncomment to update snapshot.
-    # with open(json_filepath, "w") as f:
-    #     json.dump(serialized_tree, f, indent=2)
-
-    with open(json_filepath) as f:
-        expected_serialization = json.load(f)
-
-    assert serialized_tree == expected_serialization
-
+    snapshot.assert_match(serialized_tree)
