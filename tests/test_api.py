@@ -1,6 +1,8 @@
 """Unit tests for the HTTP API."""
-from unittest import mock
+import errno
 import os
+import shutil
+from unittest import mock
 
 import eventlet
 import pytest
@@ -15,9 +17,9 @@ EXAMPLES_DIR = os.path.relpath(
 @pytest.fixture
 def clients():
     """Setup and yield flask and socketIO test clients."""
-    app, socketio, _ = api.build_app(EXAMPLES_DIR, False)
+    app, socketio, test_runner = api.build_app(EXAMPLES_DIR, True)
     app.config["TESTING"] = True
-    with app.test_client() as client:
+    with test_runner, app.test_client() as client:
         socket_client = socketio.test_client(app, flask_test_client=client)
         yield client, socket_client
 
@@ -68,3 +70,61 @@ def test_environment(mock_popen, mock_check_call, clients):
     mock_check_call.assert_called_once_with(
         ["docker-compose", "-f", "pytest_examples/docker-compose.yml", "down"]
     )
+
+
+def test_modify_filetree(snapshot, clients):
+    """
+    Test automated reload following files being created, deleted, modified or
+    moved.
+    """
+    _, socket_client = clients
+    test_file = shutil.copyfile(
+        os.path.join(EXAMPLES_DIR, "test_a.py"), os.path.join(EXAMPLES_DIR, "test_c.py")
+    )
+    try:
+        rcvd = _await_rcvd(socket_client, 1)
+        assert "test_c.py" in rcvd[0]["args"][0]["child_branches"]
+        snapshot.assert_match(rcvd)
+
+        with open(test_file, "a") as f:
+            f.write(
+                """
+def test_three():
+    assert 1 > 0
+"""
+            )
+        rcvd = _await_rcvd(socket_client, 1)
+        assert (
+            "test_three"
+            in rcvd[0]["args"][0]["child_branches"]["test_c.py"]["child_leaves"]
+        )
+        snapshot.assert_match(rcvd)
+
+        moved_test_file = shutil.move(
+            test_file, os.path.join(EXAMPLES_DIR, "test_d.py")
+        )
+        rcvd = _await_rcvd(socket_client, 1)
+        assert "test_c.py" not in rcvd[0]["args"][0]["child_branches"]
+        assert "test_d.py" in rcvd[0]["args"][0]["child_branches"]
+        snapshot.assert_match(rcvd)
+
+        os.remove(moved_test_file)
+        rcvd = _await_rcvd(socket_client, 1)
+        assert "test_c.py" not in rcvd[0]["args"][0]["child_branches"]
+        snapshot.assert_match(rcvd)
+
+    finally:
+        for filename in (test_file, moved_test_file):
+            try:
+                os.remove(filename)
+            except FileNotFoundError:
+                pass
+
+
+def _await_rcvd(socket_client, expect_rcvd_len):
+    rcvd = []
+    while len(rcvd) < expect_rcvd_len:
+        eventlet.sleep(0.1)
+        rcvd = socket_client.get_received()
+    assert len(rcvd) == expect_rcvd_len
+    return rcvd

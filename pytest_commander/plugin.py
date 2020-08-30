@@ -14,6 +14,7 @@ from _pytest import reports  # type: ignore
 
 from pytest_commander import nodeid
 from pytest_commander import result_tree
+from pytest_commander import eventlet_utils
 
 LOGGER = logging.getLogger(__name__)
 DONE = 0xDEAD
@@ -24,23 +25,40 @@ CollectReport = collections.namedtuple(
 )
 
 
-def collect_path(path: str, root_dir: str) -> result_tree.BranchNode:
+def collect_path(
+    path: str,
+    root_dir: str,
+) -> result_tree.BranchNode:
     if not path.startswith(root_dir):
         raise ValueError(
             f"path {path} does not appear to be within root dir {root_dir}"
         )
 
-    reports_queue: "queue.Queue[Union[result_tree.Node, TestReport, int]]" = queue.Queue()
-    plugin = _ReporterPlugin(queue=reports_queue, root_dir=root_dir)
+    mp_queue: "multiprocessing.Queue[Union[result_tree.Node, TestReport, int]]" = (
+        multiprocessing.Queue()
+    )
+    proc = multiprocessing.Process(
+        target=_collect_path, args=(path, root_dir, mp_queue)
+    )
+    proc.start()
+    res = eventlet_utils.get_queue_noblock(mp_queue)
+    proc.join()
+    if not isinstance(res, result_tree.BranchNode):
+        raise TypeError(f"unexpected return from queue: {res}")
+    return cast(result_tree.BranchNode, res)
+
+
+def _collect_path(
+    path: str,
+    root_dir: str,
+    mp_queue: "multiprocessing.Queue[Union[result_tree.Node, TestReport, int]]",
+):
+    plugin = _ReporterPlugin(queue=mp_queue, root_dir=root_dir)
     ret = pytest.main(
         ["--collect-only", f"--rootdir={root_dir}", path], plugins=[plugin]
     )
     if ret != 0:
         LOGGER.warning("Failed to collect tests from %s", path)
-    res = reports_queue.get()
-    if not isinstance(res, result_tree.BranchNode):
-        raise TypeError(f"unexpected return from queue: {res}")
-    return cast(result_tree.BranchNode, res)
 
 
 def run_test(
@@ -95,7 +113,9 @@ class _ReporterPlugin:
             return
         self._queue.put(
             TestReport(
-                outcome=report.outcome, longrepr=report.longrepr, nodeid=report.nodeid,
+                outcome=report.outcome,
+                longrepr=report.longrepr,
+                nodeid=report.nodeid,
             )
         )
 
@@ -109,4 +129,3 @@ def _tree_from_collect_report(report: CollectReport, root_dir: str) -> result_tr
         return result_tree.build_from_leaf(leaf_node, root_dir)
 
     return result_tree.build_from_items(report.collected_items, root_dir)
-

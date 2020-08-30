@@ -26,9 +26,9 @@ from pytest_commander import environment
 from pytest_commander import nodeid
 from pytest_commander import plugin
 from pytest_commander import watcher
+from pytest_commander import eventlet_utils
 
 LOGGER = logging.getLogger(__name__)
-_ACTIVE_LOOP_SLEEP = 0.1  # seconds
 
 
 class PyTestRunner:
@@ -54,6 +54,7 @@ class PyTestRunner:
                 target=watcher.watch_filesystem, args=(self._directory, queue)
             )
             self._watchdog_proc.start()
+            assert queue.get() == watcher.READY
             self._socketio.start_background_task(self._watch_fs_events, queue)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -105,14 +106,17 @@ class PyTestRunner:
         self._send_update()
 
     def _run_test(self, test_nodeid: nodeid.Nodeid):
-        result_queue: "multiprocessing.Queue[Union[result_tree.Node, plugin.TestReport, int]]" = multiprocessing.Queue()
+        result_queue: "multiprocessing.Queue[Union[result_tree.Node, plugin.TestReport, int]]" = (
+            multiprocessing.Queue()
+        )
         proc = multiprocessing.Process(
-            target=plugin.run_test, args=(test_nodeid, result_queue, self._directory),
+            target=plugin.run_test,
+            args=(test_nodeid, result_queue, self._directory),
         )
         LOGGER.debug("running test %s", nodeid)
         proc.start()
 
-        run_tree = _get_queue_noblock(result_queue)
+        run_tree = eventlet_utils.get_queue_noblock(result_queue)
         LOGGER.debug("got run_tree %s", run_tree)
 
         self.result_tree.merge(run_tree)
@@ -125,7 +129,7 @@ class PyTestRunner:
         eventlet.sleep()
 
         while True:
-            val = _get_queue_noblock(result_queue)
+            val = eventlet_utils.get_queue_noblock(result_queue)
             if val == plugin.DONE:
                 LOGGER.debug("DONE received, breaking")
                 break
@@ -162,7 +166,7 @@ class PyTestRunner:
 
     def _watch_fs_events(self, queue: multiprocessing.Queue):
         while True:
-            event = _get_queue_noblock(queue)
+            event = eventlet_utils.get_queue_noblock(queue)
             try:
                 self._handle_fs_event(event)
             except Exception:
@@ -173,10 +177,13 @@ class PyTestRunner:
             return
 
         if isinstance(event, (events.FileCreatedEvent, events.FileModifiedEvent)):
+            LOGGER.debug("handling file update: %s", event)
             self._handle_file_update(event.src_path)
         elif isinstance(event, events.FileDeletedEvent):
+            LOGGER.debug("handling deleted file: %s", event)
             self._handle_file_deleted(event.src_path)
         elif isinstance(event, events.FileMovedEvent):
+            LOGGER.debug("handling moved file: %s", event)
             self._handle_file_moved(event.src_path, event.dest_path)
         else:
             LOGGER.debug("dropping filesystem event: %s", event)
@@ -251,7 +258,9 @@ def _should_drop_fs_event(event: events.FileSystemEvent) -> bool:
     return False
 
 
-def _init_result_tree(directory: str,) -> result_tree.BranchNode:
+def _init_result_tree(
+    directory: str,
+) -> result_tree.BranchNode:
     """Collect the tests and initialise the result tree skeleton."""
     root_node = plugin.collect_path(directory, directory)
 
@@ -272,17 +281,3 @@ def _stop_all_environments(node: result_tree.BranchNode):
 
     for child_node in node.child_branches.values():
         _stop_all_environments(child_node)
-
-
-def _get_queue_noblock(q: multiprocessing.Queue):
-    """
-    Receive from a multiprocessing.Queue object without blocking from an
-    eventlet green thread. Polls the queue and calls eventlet.sleep() to yield
-    to other threads in between.
-    """
-    while True:
-        try:
-            return q.get_nowait()
-        except queue.Empty:
-            eventlet.sleep(_ACTIVE_LOOP_SLEEP)
-

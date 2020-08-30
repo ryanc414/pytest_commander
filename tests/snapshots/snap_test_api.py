@@ -7,6 +7,514 @@ from snapshottest import Snapshot
 
 snapshots = Snapshot()
 
+snapshots['test_modify_filetree 1'] = [
+    {
+        'args': [
+            {
+                'child_branches': {
+                    'test_a.py': {
+                        'child_branches': {
+                            'TestSuite': {
+                                'child_branches': {
+                                },
+                                'child_leaves': {
+                                    'test_alpha': {
+                                        'longrepr': None,
+                                        'nodeid': 'test_a.py::TestSuite::test_alpha',
+                                        'short_id': 'test_alpha',
+                                        'status': 'init'
+                                    },
+                                    'test_beta': {
+                                        'longrepr': None,
+                                        'nodeid': 'test_a.py::TestSuite::test_beta',
+                                        'short_id': 'test_beta',
+                                        'status': 'init'
+                                    }
+                                },
+                                'environment_state': 'inactive',
+                                'nodeid': 'test_a.py::TestSuite',
+                                'short_id': 'TestSuite',
+                                'status': 'init'
+                            }
+                        },
+                        'child_leaves': {
+                            'test_one': {
+                                'longrepr': None,
+                                'nodeid': 'test_a.py::test_one',
+                                'short_id': 'test_one',
+                                'status': 'init'
+                            },
+                            'test_two': {
+                                'longrepr': None,
+                                'nodeid': 'test_a.py::test_two',
+                                'short_id': 'test_two',
+                                'status': 'init'
+                            }
+                        },
+                        'environment_state': 'inactive',
+                        'nodeid': 'test_a.py',
+                        'short_id': 'test_a.py',
+                        'status': 'init'
+                    },
+                    'test_b.py': {
+                        'child_branches': {
+                        },
+                        'child_leaves': {
+                            'test_http_service': {
+                                'longrepr': None,
+                                'nodeid': 'test_b.py::test_http_service',
+                                'short_id': 'test_http_service',
+                                'status': 'init'
+                            },
+                            'test_one': {
+                                'longrepr': None,
+                                'nodeid': 'test_b.py::test_one',
+                                'short_id': 'test_one',
+                                'status': 'init'
+                            },
+                            'test_two': {
+                                'longrepr': None,
+                                'nodeid': 'test_b.py::test_two',
+                                'short_id': 'test_two',
+                                'status': 'init'
+                            }
+                        },
+                        'environment_state': 'inactive',
+                        'nodeid': 'test_b.py',
+                        'short_id': 'test_b.py',
+                        'status': 'init'
+                    },
+                    'test_c.py': {
+                        'child_branches': {
+                            'TestSuite': {
+                                'child_branches': {
+                                },
+                                'child_leaves': {
+                                    'test_alpha': {
+                                        'longrepr': None,
+                                        'nodeid': 'test_c.py::TestSuite::test_alpha',
+                                        'short_id': 'test_alpha',
+                                        'status': 'init'
+                                    },
+                                    'test_beta': {
+                                        'longrepr': None,
+                                        'nodeid': 'test_c.py::TestSuite::test_beta',
+                                        'short_id': 'test_beta',
+                                        'status': 'init'
+                                    }
+                                },
+                                'environment_state': 'inactive',
+                                'nodeid': 'test_c.py::TestSuite',
+                                'short_id': 'TestSuite',
+                                'status': 'init'
+                            }
+                        },
+                        'child_leaves': {
+                            'test_one': {
+                                'longrepr': None,
+                                'nodeid': 'test_c.py::test_one',
+                                'short_id': 'test_one',
+                                'status': 'init'
+                            },
+                            'test_two': {
+                                'longrepr': None,
+                                'nodeid': 'test_c.py::test_two',
+                                'short_id': 'test_two',
+                                'status': 'init'
+                            }
+                        },
+                        'environment_state': 'inactive',
+                        'nodeid': 'test_c.py',
+                        'short_id': 'test_c.py',
+                        'status': 'init'
+                    }
+                },
+                'child_leaves': {
+                },
+                'environment_state': 'stopped',
+                'nodeid': '',
+                'short_id': 'pytest_examples',
+                'status': 'init'
+            }
+        ],
+        'name': 'update',
+        'namespace': '/'
+    }
+]
+
+snapshots['test_modify_filetree 2'] = [
+    {
+        'args': [
+            {
+                'child_branches': {
+                    'test_a.py': {
+                        'child_branches': {
+                            'TestSuite': {
+                                'child_branches': {
+                                },
+                                'child_leaves': {
+                                    'test_alpha': {
+                                        'longrepr': None,
+                                        'nodeid': 'test_a.py::TestSuite::test_alpha',
+                                        'short_id': 'test_alpha',
+                                        'status': 'init'
+                                    },
+                                    'test_beta': {
+                                        'longrepr': None,
+                                        'nodeid': 'test_a.py::TestSuite::test_beta',
+                                        'short_id': 'test_beta',
+                                        'status': 'init'
+                                    }
+                                },
+                                'environment_state': 'inactive',
+                                'nodeid': 'test_a.py::TestSuite',
+                                'short_id': 'TestSuite',
+                                'status': 'init'
+                            }
+                        },
+                        'child_leaves': {
+                            'test_one': {
+                                'longrepr': None,
+                                'nodeid': 'test_a.py::test_one',
+                                'short_id': 'test_one',
+                                'status': 'init'
+                            },
+                            'test_two': {
+                                'longrepr': None,
+                                'nodeid': 'test_a.py::test_two',
+                                'short_id': 'test_two',
+                                'status': 'init'
+                            }
+                        },
+                        'environment_state': 'inactive',
+                        'nodeid': 'test_a.py',
+                        'short_id': 'test_a.py',
+                        'status': 'init'
+                    },
+                    'test_b.py': {
+                        'child_branches': {
+                        },
+                        'child_leaves': {
+                            'test_http_service': {
+                                'longrepr': None,
+                                'nodeid': 'test_b.py::test_http_service',
+                                'short_id': 'test_http_service',
+                                'status': 'init'
+                            },
+                            'test_one': {
+                                'longrepr': None,
+                                'nodeid': 'test_b.py::test_one',
+                                'short_id': 'test_one',
+                                'status': 'init'
+                            },
+                            'test_two': {
+                                'longrepr': None,
+                                'nodeid': 'test_b.py::test_two',
+                                'short_id': 'test_two',
+                                'status': 'init'
+                            }
+                        },
+                        'environment_state': 'inactive',
+                        'nodeid': 'test_b.py',
+                        'short_id': 'test_b.py',
+                        'status': 'init'
+                    },
+                    'test_c.py': {
+                        'child_branches': {
+                            'TestSuite': {
+                                'child_branches': {
+                                },
+                                'child_leaves': {
+                                    'test_alpha': {
+                                        'longrepr': None,
+                                        'nodeid': 'test_c.py::TestSuite::test_alpha',
+                                        'short_id': 'test_alpha',
+                                        'status': 'init'
+                                    },
+                                    'test_beta': {
+                                        'longrepr': None,
+                                        'nodeid': 'test_c.py::TestSuite::test_beta',
+                                        'short_id': 'test_beta',
+                                        'status': 'init'
+                                    }
+                                },
+                                'environment_state': 'inactive',
+                                'nodeid': 'test_c.py::TestSuite',
+                                'short_id': 'TestSuite',
+                                'status': 'init'
+                            }
+                        },
+                        'child_leaves': {
+                            'test_one': {
+                                'longrepr': None,
+                                'nodeid': 'test_c.py::test_one',
+                                'short_id': 'test_one',
+                                'status': 'init'
+                            },
+                            'test_three': {
+                                'longrepr': None,
+                                'nodeid': 'test_c.py::test_three',
+                                'short_id': 'test_three',
+                                'status': 'init'
+                            },
+                            'test_two': {
+                                'longrepr': None,
+                                'nodeid': 'test_c.py::test_two',
+                                'short_id': 'test_two',
+                                'status': 'init'
+                            }
+                        },
+                        'environment_state': 'inactive',
+                        'nodeid': 'test_c.py',
+                        'short_id': 'test_c.py',
+                        'status': 'init'
+                    }
+                },
+                'child_leaves': {
+                },
+                'environment_state': 'stopped',
+                'nodeid': '',
+                'short_id': 'pytest_examples',
+                'status': 'init'
+            }
+        ],
+        'name': 'update',
+        'namespace': '/'
+    }
+]
+
+snapshots['test_modify_filetree 3'] = [
+    {
+        'args': [
+            {
+                'child_branches': {
+                    'test_a.py': {
+                        'child_branches': {
+                            'TestSuite': {
+                                'child_branches': {
+                                },
+                                'child_leaves': {
+                                    'test_alpha': {
+                                        'longrepr': None,
+                                        'nodeid': 'test_a.py::TestSuite::test_alpha',
+                                        'short_id': 'test_alpha',
+                                        'status': 'init'
+                                    },
+                                    'test_beta': {
+                                        'longrepr': None,
+                                        'nodeid': 'test_a.py::TestSuite::test_beta',
+                                        'short_id': 'test_beta',
+                                        'status': 'init'
+                                    }
+                                },
+                                'environment_state': 'inactive',
+                                'nodeid': 'test_a.py::TestSuite',
+                                'short_id': 'TestSuite',
+                                'status': 'init'
+                            }
+                        },
+                        'child_leaves': {
+                            'test_one': {
+                                'longrepr': None,
+                                'nodeid': 'test_a.py::test_one',
+                                'short_id': 'test_one',
+                                'status': 'init'
+                            },
+                            'test_two': {
+                                'longrepr': None,
+                                'nodeid': 'test_a.py::test_two',
+                                'short_id': 'test_two',
+                                'status': 'init'
+                            }
+                        },
+                        'environment_state': 'inactive',
+                        'nodeid': 'test_a.py',
+                        'short_id': 'test_a.py',
+                        'status': 'init'
+                    },
+                    'test_b.py': {
+                        'child_branches': {
+                        },
+                        'child_leaves': {
+                            'test_http_service': {
+                                'longrepr': None,
+                                'nodeid': 'test_b.py::test_http_service',
+                                'short_id': 'test_http_service',
+                                'status': 'init'
+                            },
+                            'test_one': {
+                                'longrepr': None,
+                                'nodeid': 'test_b.py::test_one',
+                                'short_id': 'test_one',
+                                'status': 'init'
+                            },
+                            'test_two': {
+                                'longrepr': None,
+                                'nodeid': 'test_b.py::test_two',
+                                'short_id': 'test_two',
+                                'status': 'init'
+                            }
+                        },
+                        'environment_state': 'inactive',
+                        'nodeid': 'test_b.py',
+                        'short_id': 'test_b.py',
+                        'status': 'init'
+                    },
+                    'test_d.py': {
+                        'child_branches': {
+                            'TestSuite': {
+                                'child_branches': {
+                                },
+                                'child_leaves': {
+                                    'test_alpha': {
+                                        'longrepr': None,
+                                        'nodeid': 'test_d.py::TestSuite::test_alpha',
+                                        'short_id': 'test_alpha',
+                                        'status': 'init'
+                                    },
+                                    'test_beta': {
+                                        'longrepr': None,
+                                        'nodeid': 'test_d.py::TestSuite::test_beta',
+                                        'short_id': 'test_beta',
+                                        'status': 'init'
+                                    }
+                                },
+                                'environment_state': 'inactive',
+                                'nodeid': 'test_d.py::TestSuite',
+                                'short_id': 'TestSuite',
+                                'status': 'init'
+                            }
+                        },
+                        'child_leaves': {
+                            'test_one': {
+                                'longrepr': None,
+                                'nodeid': 'test_d.py::test_one',
+                                'short_id': 'test_one',
+                                'status': 'init'
+                            },
+                            'test_three': {
+                                'longrepr': None,
+                                'nodeid': 'test_d.py::test_three',
+                                'short_id': 'test_three',
+                                'status': 'init'
+                            },
+                            'test_two': {
+                                'longrepr': None,
+                                'nodeid': 'test_d.py::test_two',
+                                'short_id': 'test_two',
+                                'status': 'init'
+                            }
+                        },
+                        'environment_state': 'inactive',
+                        'nodeid': 'test_d.py',
+                        'short_id': 'test_d.py',
+                        'status': 'init'
+                    }
+                },
+                'child_leaves': {
+                },
+                'environment_state': 'stopped',
+                'nodeid': '',
+                'short_id': 'pytest_examples',
+                'status': 'init'
+            }
+        ],
+        'name': 'update',
+        'namespace': '/'
+    }
+]
+
+snapshots['test_modify_filetree 4'] = [
+    {
+        'args': [
+            {
+                'child_branches': {
+                    'test_a.py': {
+                        'child_branches': {
+                            'TestSuite': {
+                                'child_branches': {
+                                },
+                                'child_leaves': {
+                                    'test_alpha': {
+                                        'longrepr': None,
+                                        'nodeid': 'test_a.py::TestSuite::test_alpha',
+                                        'short_id': 'test_alpha',
+                                        'status': 'init'
+                                    },
+                                    'test_beta': {
+                                        'longrepr': None,
+                                        'nodeid': 'test_a.py::TestSuite::test_beta',
+                                        'short_id': 'test_beta',
+                                        'status': 'init'
+                                    }
+                                },
+                                'environment_state': 'inactive',
+                                'nodeid': 'test_a.py::TestSuite',
+                                'short_id': 'TestSuite',
+                                'status': 'init'
+                            }
+                        },
+                        'child_leaves': {
+                            'test_one': {
+                                'longrepr': None,
+                                'nodeid': 'test_a.py::test_one',
+                                'short_id': 'test_one',
+                                'status': 'init'
+                            },
+                            'test_two': {
+                                'longrepr': None,
+                                'nodeid': 'test_a.py::test_two',
+                                'short_id': 'test_two',
+                                'status': 'init'
+                            }
+                        },
+                        'environment_state': 'inactive',
+                        'nodeid': 'test_a.py',
+                        'short_id': 'test_a.py',
+                        'status': 'init'
+                    },
+                    'test_b.py': {
+                        'child_branches': {
+                        },
+                        'child_leaves': {
+                            'test_http_service': {
+                                'longrepr': None,
+                                'nodeid': 'test_b.py::test_http_service',
+                                'short_id': 'test_http_service',
+                                'status': 'init'
+                            },
+                            'test_one': {
+                                'longrepr': None,
+                                'nodeid': 'test_b.py::test_one',
+                                'short_id': 'test_one',
+                                'status': 'init'
+                            },
+                            'test_two': {
+                                'longrepr': None,
+                                'nodeid': 'test_b.py::test_two',
+                                'short_id': 'test_two',
+                                'status': 'init'
+                            }
+                        },
+                        'environment_state': 'inactive',
+                        'nodeid': 'test_b.py',
+                        'short_id': 'test_b.py',
+                        'status': 'init'
+                    }
+                },
+                'child_leaves': {
+                },
+                'environment_state': 'stopped',
+                'nodeid': '',
+                'short_id': 'pytest_examples',
+                'status': 'init'
+            }
+        ],
+        'name': 'update',
+        'namespace': '/'
+    }
+]
+
 snapshots['test_report_skeleton 1'] = {
     'child_branches': {
         'test_a.py': {

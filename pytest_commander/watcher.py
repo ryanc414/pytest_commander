@@ -13,6 +13,7 @@ from watchdog import events  # type: ignore
 from watchdog import observers  # type: ignore
 
 LOGGER = logging.getLogger(__name__)
+READY = 0xFEED
 
 
 def watch_filesystem(root_dir: str, events_queue: multiprocessing.Queue):
@@ -20,6 +21,7 @@ def watch_filesystem(root_dir: str, events_queue: multiprocessing.Queue):
     observer = observers.Observer()
     observer.schedule(event_handler, root_dir, recursive=True)
     observer.start()
+    events_queue.put(READY)
     try:
         while True:
             time.sleep(1)
