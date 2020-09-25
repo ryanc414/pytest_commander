@@ -81,3 +81,115 @@ snapshots['test_build_tree 1'] = {
     'short_id': 'root',
     'status': 'init'
 }
+
+snapshots['test_parameterized_tests_removed before_merge'] = {
+    'child_branches': {
+        'path': {
+            'child_branches': {
+                'to': {
+                    'child_branches': {
+                        'test_params.py': {
+                            'child_branches': {
+                            },
+                            'child_leaves': {
+                                'test_params[alpha]': {
+                                    'longrepr': None,
+                                    'nodeid': 'path/to/test_params.py::test_params[alpha]',
+                                    'short_id': 'test_params[alpha]',
+                                    'status': 'init'
+                                },
+                                'test_params[beta]': {
+                                    'longrepr': None,
+                                    'nodeid': 'path/to/test_params.py::test_params[beta]',
+                                    'short_id': 'test_params[beta]',
+                                    'status': 'init'
+                                },
+                                'test_params[gamma]': {
+                                    'longrepr': None,
+                                    'nodeid': 'path/to/test_params.py::test_params[gamma]',
+                                    'short_id': 'test_params[gamma]',
+                                    'status': 'init'
+                                }
+                            },
+                            'environment_state': 'inactive',
+                            'nodeid': 'path/to/test_params.py',
+                            'short_id': 'test_params.py',
+                            'status': 'init'
+                        }
+                    },
+                    'child_leaves': {
+                    },
+                    'environment_state': 'inactive',
+                    'nodeid': 'path/to',
+                    'short_id': 'to',
+                    'status': 'init'
+                }
+            },
+            'child_leaves': {
+            },
+            'environment_state': 'inactive',
+            'nodeid': 'path',
+            'short_id': 'path',
+            'status': 'init'
+        }
+    },
+    'child_leaves': {
+    },
+    'environment_state': 'inactive',
+    'nodeid': '',
+    'short_id': 'root',
+    'status': 'init'
+}
+
+snapshots['test_parameterized_tests_removed after_merge'] = {
+    'child_branches': {
+        'path': {
+            'child_branches': {
+                'to': {
+                    'child_branches': {
+                        'test_params.py': {
+                            'child_branches': {
+                            },
+                            'child_leaves': {
+                                'test_params[alpha]': {
+                                    'longrepr': None,
+                                    'nodeid': 'path/to/test_params.py::test_params[alpha]',
+                                    'short_id': 'test_params[alpha]',
+                                    'status': 'init'
+                                },
+                                'test_params[beta]': {
+                                    'longrepr': None,
+                                    'nodeid': 'path/to/test_params.py::test_params[beta]',
+                                    'short_id': 'test_params[beta]',
+                                    'status': 'init'
+                                }
+                            },
+                            'environment_state': 'inactive',
+                            'nodeid': 'path/to/test_params.py',
+                            'short_id': 'test_params.py',
+                            'status': 'init'
+                        }
+                    },
+                    'child_leaves': {
+                    },
+                    'environment_state': 'inactive',
+                    'nodeid': 'path/to',
+                    'short_id': 'to',
+                    'status': 'init'
+                }
+            },
+            'child_leaves': {
+            },
+            'environment_state': 'inactive',
+            'nodeid': 'path',
+            'short_id': 'path',
+            'status': 'init'
+        }
+    },
+    'child_leaves': {
+    },
+    'environment_state': 'inactive',
+    'nodeid': '',
+    'short_id': 'root',
+    'status': 'init'
+}
