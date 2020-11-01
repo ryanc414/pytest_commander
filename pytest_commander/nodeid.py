@@ -2,10 +2,19 @@
 from __future__ import annotations
 
 import collections
+import enum
 import os
+import re
 from typing import List, Any
 
-NodeidFragment = collections.namedtuple("NodeidFragment", ["val", "is_path"])
+NodeidFragment = collections.namedtuple("NodeidFragment", ["val", "type"])
+
+
+class FragmentTypes(enum.Enum):
+
+    PATH_COMPONENT = 1
+    METHOD_COMPONENT = 2
+    PARAMETER = 3
 
 
 class Nodeid:
@@ -13,6 +22,9 @@ class Nodeid:
 
     _PATH_SEP = "/"
     _NONPATH_SEP = "::"
+    _PARAM_OPENER = "["
+    _PARAM_CLOSER = "]"
+    _PARAM_RX = re.compile(r"(.*)\[(.*)\]")
 
     def __init__(self, raw_nodeid: str, fragments: List[NodeidFragment]):
         self._raw_nodeid = raw_nodeid
@@ -25,13 +37,21 @@ class Nodeid:
 
         raw_components = raw_nodeid.split("::")
         path_components = [
-            NodeidFragment(val=frag, is_path=True)
+            NodeidFragment(val=frag, type=FragmentTypes.PATH_COMPONENT)
             for frag in raw_components[0].split("/")
         ]
         nonpath_components = [
-            NodeidFragment(val=frag, is_path=False) for frag in raw_components[1:]
+            NodeidFragment(val=frag, type=FragmentTypes.METHOD_COMPONENT)
+            for frag in raw_components[1:]
         ]
         fragments = path_components + nonpath_components
+        match = cls._PARAM_RX.match(fragments[-1].val)
+        if match:
+            fragments = fragments[:-1] + [
+                NodeidFragment(val=match.group(1), type=FragmentTypes.METHOD_COMPONENT),
+                NodeidFragment(val=match.group(2), type=FragmentTypes.PARAMETER),
+            ]
+
         return cls(raw_nodeid, fragments)
 
     @classmethod
@@ -41,9 +61,20 @@ class Nodeid:
 
         str_components = [fragments[0].val]
         for frag in fragments[1:]:
-            separator = cls._PATH_SEP if frag.is_path else cls._NONPATH_SEP
-            str_components.append(separator)
-            str_components.append(frag.val)
+            if frag.type == FragmentTypes.PATH_COMPONENT:
+                str_components.append(cls._PATH_SEP)
+                str_components.append(frag.val)
+            elif frag.type == FragmentTypes.METHOD_COMPONENT:
+                str_components.append(cls._NONPATH_SEP)
+                str_components.append(frag.val)
+            elif frag.type == FragmentTypes.PARAMETER:
+                str_components.append(cls._PARAM_OPENER)
+                str_components.append(frag.val)
+                str_components.append(cls._PARAM_CLOSER)
+            else:
+                raise ValueError(
+                    f"unexpected fragment type {frag.type} for element {frag.val}"
+                )
 
         raw_nodeid = "".join(str_components)
         return cls(raw_nodeid, fragments)

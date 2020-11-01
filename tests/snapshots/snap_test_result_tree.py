@@ -36,6 +36,34 @@ snapshots['test_build_tree 1'] = {
                                     'nodeid': 'path/to/test_a.py::TestSuite',
                                     'short_id': 'TestSuite',
                                     'status': 'init'
+                                },
+                                'test_three': {
+                                    'child_branches': {
+                                    },
+                                    'child_leaves': {
+                                        '1': {
+                                            'longrepr': None,
+                                            'nodeid': 'path/to/test_a.py::test_three[1]',
+                                            'short_id': '1',
+                                            'status': 'init'
+                                        },
+                                        '2': {
+                                            'longrepr': None,
+                                            'nodeid': 'path/to/test_a.py::test_three[2]',
+                                            'short_id': '2',
+                                            'status': 'init'
+                                        },
+                                        '3': {
+                                            'longrepr': None,
+                                            'nodeid': 'path/to/test_a.py::test_three[3]',
+                                            'short_id': '3',
+                                            'status': 'init'
+                                        }
+                                    },
+                                    'environment_state': 'inactive',
+                                    'nodeid': 'path/to/test_a.py::test_three',
+                                    'short_id': 'test_three',
+                                    'status': 'init'
                                 }
                             },
                             'child_leaves': {
