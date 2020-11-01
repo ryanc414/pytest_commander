@@ -17,6 +17,9 @@ ITEMS = [
         "path/to/test_a.py::TestSuite::test_two",
         "path/to/test_a.py::test_one",
         "path/to/test_a.py::test_two",
+        "path/to/test_a.py::test_three[1]",
+        "path/to/test_a.py::test_three[2]",
+        "path/to/test_a.py::test_three[3]",
     ]
 ]
 
