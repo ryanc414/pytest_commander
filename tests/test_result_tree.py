@@ -7,6 +7,7 @@ import os
 import pytest
 
 from pytest_commander import result_tree
+from pytest_commander import nodeid
 
 SessionItem = collections.namedtuple("SessionItem", ["nodeid"])
 
@@ -33,3 +34,31 @@ def test_build_tree(snapshot):
     serializer = result_tree.BranchNodeSchema()
     serialized_tree = serializer.dump(tree)
     snapshot.assert_match(serialized_tree)
+
+
+def test_parameterized_tests_removed(snapshot):
+    items = [
+        SessionItem(nodeid)
+        for nodeid in [
+            "path/to/test_params.py::test_params[alpha]",
+            "path/to/test_params.py::test_params[beta]",
+            "path/to/test_params.py::test_params[gamma]",
+        ]
+    ]
+
+    items_missing_one_parameter = items[:2]
+    tree = result_tree.build_from_items(items, "/root")
+    tree_missing_one_parameter = result_tree.build_from_items(
+        items_missing_one_parameter, "/root"
+    )
+    assert len(items) == 3
+    assert len(items_missing_one_parameter) == 2
+    serializer = result_tree.BranchNodeSchema()
+    serialized_tree = serializer.dump(tree)
+    tree.merge(
+        tree_missing_one_parameter,
+        nodeid.Nodeid.from_string("path/to/test_params.py"),
+    )
+    serialized_tree_after_merge = serializer.dump(tree)
+    snapshot.assert_match(serialized_tree, "before_merge")
+    snapshot.assert_match(serialized_tree_after_merge, "after_merge")
