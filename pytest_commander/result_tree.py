@@ -141,6 +141,33 @@ class BranchNode(Node):
         for leaf in self.child_leaves.values():
             yield leaf
 
+    def merge(self, other: BranchNode, merge_base: nodeid.Nodeid):
+        """
+        Merge another tree into this one. In case of collisions, the other
+        tree's child nodes take precedence.
+
+        All nodes from the merge_base point down are replaced instead of being
+        merged.
+        """
+        for child_branch in other.child_branches.values():
+            if child_branch.short_id in self.child_leaves:
+                del self.child_leaves[child_branch.short_id]
+
+            if (
+                child_branch.short_id in self.child_branches
+                and child_branch.nodeid != merge_base
+            ):
+                self.child_branches[child_branch.short_id].merge(
+                    child_branch, merge_base
+                )
+            else:
+                self.child_branches[child_branch.short_id] = child_branch
+
+        for leaf_id in other.child_leaves:
+            if leaf_id in self.child_branches:
+                del self.child_branches[leaf_id]
+        self.child_leaves.update(other.child_leaves)
+
     @property
     def environment_state(self):
         if self.environment is None:
@@ -174,25 +201,6 @@ class BranchNode(Node):
     def status(self, new_status: TestState):
         for child in self.iter_children():
             child.status = new_status
-
-    def merge(self, other: BranchNode):
-        """
-        Merge another tree into this one. In case of collisions, the other
-        tree's child nodes take precedence.
-        """
-        for child_branch in other.child_branches.values():
-            if child_branch.short_id in self.child_leaves:
-                del self.child_leaves[child_branch.short_id]
-
-            if child_branch.short_id in self.child_branches:
-                self.child_branches[child_branch.short_id].merge(child_branch)
-            else:
-                self.child_branches[child_branch.short_id] = child_branch
-
-        for leaf_id in other.child_leaves:
-            if leaf_id in self.child_branches:
-                del self.child_branches[leaf_id]
-        self.child_leaves.update(other.child_leaves)
 
 
 class LeafNode(Node):

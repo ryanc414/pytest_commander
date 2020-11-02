@@ -119,7 +119,7 @@ class PyTestRunner:
         run_tree = eventlet_utils.get_queue_noblock(result_queue)
         LOGGER.debug("got run_tree %s", run_tree)
 
-        self.result_tree.merge(run_tree)
+        self.result_tree.merge(run_tree, test_nodeid)
         node = self._node_index[test_nodeid]
         if node.status == result_tree.TestState.INIT:
             node.status = result_tree.TestState.RUNNING
@@ -191,7 +191,9 @@ class PyTestRunner:
     def _handle_file_update(self, filepath: str):
         """Handle a file being created or modified."""
         root_node = plugin.collect_path(filepath, self._directory)
-        self.result_tree.merge(root_node)
+        self.result_tree.merge(
+            root_node, nodeid.Nodeid.from_path(filepath, self._directory)
+        )
         self._send_update()
 
     def _handle_file_deleted(self, filepath: str):
@@ -213,7 +215,9 @@ class PyTestRunner:
             LOGGER.debug("could not find node in tree: %s", orig_nodeid)
             return
         collect_root = plugin.collect_path(dest_path, self._directory)
-        self.result_tree.merge(collect_root)
+        self.result_tree.merge(
+            collect_root, nodeid.Nodeid.from_path(dest_path, self._directory)
+        )
         self._send_update()
 
     def _pop_node(self, pop_nodeid: nodeid.Nodeid) -> result_tree.Node:

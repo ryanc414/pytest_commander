@@ -118,26 +118,36 @@ snapshots['test_parameterized_tests_removed before_merge'] = {
                     'child_branches': {
                         'test_params.py': {
                             'child_branches': {
-                            },
-                            'child_leaves': {
-                                'test_params[alpha]': {
-                                    'longrepr': None,
-                                    'nodeid': 'path/to/test_params.py::test_params[alpha]',
-                                    'short_id': 'test_params[alpha]',
-                                    'status': 'init'
-                                },
-                                'test_params[beta]': {
-                                    'longrepr': None,
-                                    'nodeid': 'path/to/test_params.py::test_params[beta]',
-                                    'short_id': 'test_params[beta]',
-                                    'status': 'init'
-                                },
-                                'test_params[gamma]': {
-                                    'longrepr': None,
-                                    'nodeid': 'path/to/test_params.py::test_params[gamma]',
-                                    'short_id': 'test_params[gamma]',
+                                'test_params': {
+                                    'child_branches': {
+                                    },
+                                    'child_leaves': {
+                                        'alpha': {
+                                            'longrepr': None,
+                                            'nodeid': 'path/to/test_params.py::test_params[alpha]',
+                                            'short_id': 'alpha',
+                                            'status': 'init'
+                                        },
+                                        'beta': {
+                                            'longrepr': None,
+                                            'nodeid': 'path/to/test_params.py::test_params[beta]',
+                                            'short_id': 'beta',
+                                            'status': 'init'
+                                        },
+                                        'gamma': {
+                                            'longrepr': None,
+                                            'nodeid': 'path/to/test_params.py::test_params[gamma]',
+                                            'short_id': 'gamma',
+                                            'status': 'init'
+                                        }
+                                    },
+                                    'environment_state': 'inactive',
+                                    'nodeid': 'path/to/test_params.py::test_params',
+                                    'short_id': 'test_params',
                                     'status': 'init'
                                 }
+                            },
+                            'child_leaves': {
                             },
                             'environment_state': 'inactive',
                             'nodeid': 'path/to/test_params.py',
@@ -177,20 +187,30 @@ snapshots['test_parameterized_tests_removed after_merge'] = {
                     'child_branches': {
                         'test_params.py': {
                             'child_branches': {
-                            },
-                            'child_leaves': {
-                                'test_params[alpha]': {
-                                    'longrepr': None,
-                                    'nodeid': 'path/to/test_params.py::test_params[alpha]',
-                                    'short_id': 'test_params[alpha]',
-                                    'status': 'init'
-                                },
-                                'test_params[beta]': {
-                                    'longrepr': None,
-                                    'nodeid': 'path/to/test_params.py::test_params[beta]',
-                                    'short_id': 'test_params[beta]',
+                                'test_params': {
+                                    'child_branches': {
+                                    },
+                                    'child_leaves': {
+                                        'alpha': {
+                                            'longrepr': None,
+                                            'nodeid': 'path/to/test_params.py::test_params[alpha]',
+                                            'short_id': 'alpha',
+                                            'status': 'init'
+                                        },
+                                        'beta': {
+                                            'longrepr': None,
+                                            'nodeid': 'path/to/test_params.py::test_params[beta]',
+                                            'short_id': 'beta',
+                                            'status': 'init'
+                                        }
+                                    },
+                                    'environment_state': 'inactive',
+                                    'nodeid': 'path/to/test_params.py::test_params',
+                                    'short_id': 'test_params',
                                     'status': 'init'
                                 }
+                            },
+                            'child_leaves': {
                             },
                             'environment_state': 'inactive',
                             'nodeid': 'path/to/test_params.py',
