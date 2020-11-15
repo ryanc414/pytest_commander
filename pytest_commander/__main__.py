@@ -1,7 +1,6 @@
 """PyTest UI server main entry point."""
 import argparse
 import logging
-import threading
 import os
 import sys
 import webbrowser
@@ -28,10 +27,12 @@ def main():
 
     app, socketio, test_runner = api.build_app(args.directory, not args.no_watch)
     address = f"http://{display_host(args.host)}:{args.port}/"
-    LOGGER.critical(f"View in your browser at {address}")
 
     if not args.no_browse:
-        threading.Thread(target=open_webbrowser, args=(address,)).start()
+        # According to the eventlet concurrency model, this will not be started
+        # as a background task until the socketio server has started and
+        # co-operatively yields control.
+        socketio.start_background_task(open_webbrowser, address)
 
     with test_runner:
         socketio.run(app, host=args.host, port=args.port, debug=args.debug)
@@ -55,7 +56,9 @@ def parse_args() -> argparse.Namespace:
         help=f"Directory to find PyTest test modules, defaults to cwd ({os.getcwd()})",
     )
     parser.add_argument(
-        "--host", default="localhost", help=f"Host to bind to, defaults to localhost.",
+        "--host",
+        default="localhost",
+        help=f"Host to bind to, defaults to localhost.",
     )
     parser.add_argument(
         "-p",
@@ -85,16 +88,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def open_webbrowser(address: str):
-    """Wait for the server to be ready, then open the app in the webbrowser."""
-    status_code = None
-    while status_code != 200:
-        try:
-            rsp = requests.get(address)
-            status_code = rsp.status_code
-        except requests.ConnectionError:
-            pass
-        time.sleep(0.1)
-
+    LOGGER.critical("View in your browser at %s", address)
     webbrowser.open(address)
 
 
