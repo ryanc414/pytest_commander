@@ -25,7 +25,7 @@ def main():
     log_level = logging.DEBUG if args.debug else logging.CRITICAL
     logging.basicConfig(level=log_level)
 
-    app, socketio, test_runner = api.build_app(args.directory, not args.no_watch)
+    app, socketio, test_runner = api.build_app(args.directory, args.watch)
     address = f"http://{display_host(args.host)}:{args.port}/"
 
     if not args.no_browse:
@@ -79,9 +79,17 @@ def parse_args() -> argparse.Namespace:
         help="Do not automatically open a web browser to view the UI",
     )
     parser.add_argument(
-        "--no-watch",
-        action="store_true",
-        help="Disable watching for filesystem changes in the background",
+        "-w",
+        "--watch",
+        choices=["collect", "autorun", "disabled"],
+        default="collect",
+        help=(
+            "Filesystem watch mode. In the default 'collect' mode, tests are "
+            "recollected after filesystem changes are detected but not "
+            "automatically re-run. To re-run tests automatically when they are "
+            "modified, use 'autorun' mode. To disable file-watching entirely, "
+            "select 'disabled'."
+        ),
     )
 
     return parser.parse_args()
