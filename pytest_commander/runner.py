@@ -35,20 +35,23 @@ class PyTestRunner:
     """Owns the test result tree and handles running tests and updating the results."""
 
     def __init__(
-        self, directory: str, socketio: flask_socketio.SocketIO, watch_filesystem: bool
+        self,
+        directory: str,
+        socketio: flask_socketio.SocketIO,
+        watch_mode: str,
     ):
         self._directory = directory
-        self.result_tree = _init_result_tree(directory)
+        self.result_tree = _init_result_tree(directory, watch_mode)
         self._socketio = socketio
         self._branch_schema = result_tree.BranchNodeSchema()
         self._leaf_schema = result_tree.LeafNodeSchema()
         self._node_index = result_tree.Indexer(self.result_tree)
-        self._watch_filesystem = watch_filesystem
+        self._watch_mode = watch_mode
         self._watchdog_proc: Optional[multiprocessing.Process] = None
 
     def __enter__(self):
         """Context manager entry: start filesystem observer."""
-        if self._watch_filesystem:
+        if self._watch_mode != "disabled":
             queue = multiprocessing.Queue()
             self._watchdog_proc = multiprocessing.Process(
                 target=watcher.watch_filesystem, args=(self._directory, queue)
@@ -56,6 +59,11 @@ class PyTestRunner:
             self._watchdog_proc.start()
             assert queue.get() == watcher.READY
             self._socketio.start_background_task(self._watch_fs_events, queue)
+
+            if self._watch_mode == "autorun":
+                self._socketio.start_background_task(
+                    self._run_test, nodeid.EMPTY_NODEID
+                )
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """
@@ -190,11 +198,15 @@ class PyTestRunner:
 
     def _handle_file_update(self, filepath: str):
         """Handle a file being created or modified."""
-        root_node = plugin.collect_path(filepath, self._directory)
-        self.result_tree.merge(
-            root_node, nodeid.Nodeid.from_path(filepath, self._directory)
-        )
-        self._send_update()
+        if self._watch_mode == "collect":
+            root_node = plugin.collect_path(filepath, self._directory)
+            self.result_tree.merge(
+                root_node, nodeid.Nodeid.from_path(filepath, self._directory)
+            )
+            self._send_update()
+        else:
+            test_nodeid = nodeid.Nodeid.from_path(filepath, self._directory)
+            self._run_test(test_nodeid)
 
     def _handle_file_deleted(self, filepath: str):
         """Handle a file being deleted."""
@@ -262,10 +274,14 @@ def _should_drop_fs_event(event: events.FileSystemEvent) -> bool:
     return False
 
 
-def _init_result_tree(
-    directory: str,
-) -> result_tree.BranchNode:
+def _init_result_tree(directory: str, watch_mode: str) -> result_tree.BranchNode:
     """Collect the tests and initialise the result tree skeleton."""
+    if watch_mode == "autorun":
+        short_id = os.path.basename(directory.rstrip(os.sep))
+        return result_tree.BranchNode(
+            branch_nodeid=nodeid.EMPTY_NODEID, root_dir=directory, short_id=short_id
+        )
+
     root_node = plugin.collect_path(directory, directory)
 
     if len(root_node.child_branches) == 0 and len(root_node.child_leaves) == 0:

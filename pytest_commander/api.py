@@ -16,7 +16,8 @@ LOGGER = logging.getLogger(__name__)
 
 
 def build_app(
-    directory: str, watch_filesystem: bool,
+    directory: str,
+    watch_mode: str,
 ) -> Tuple[flask.Flask, flask_socketio.SocketIO, runner.PyTestRunner]:
     """Build a Flask app to serve the API and static files."""
     build_dir = pkg_resources.resource_filename(__name__, "web_client/build")
@@ -27,7 +28,7 @@ def build_app(
     app = flask.Flask(__name__, root_path=build_dir, static_folder=static_dir)
     branch_schema = result_tree.BranchNodeSchema()
     socketio = flask_socketio.SocketIO(app)
-    test_runner = runner.PyTestRunner(directory, socketio, watch_filesystem)
+    test_runner = runner.PyTestRunner(directory, socketio, watch_mode)
 
     @app.route("/")
     def index():
