@@ -49,6 +49,9 @@ class PyTestRunner:
         self._watch_mode = watch_mode
         self._watchdog_proc: Optional[multiprocessing.Process] = None
 
+        if watch_mode == "autorun":
+            self._run_test(nodeid.EMPTY_NODEID)
+
     def __enter__(self):
         """Context manager entry: start filesystem observer."""
         if self._watch_mode != "disabled":
@@ -59,11 +62,6 @@ class PyTestRunner:
             self._watchdog_proc.start()
             assert queue.get() == watcher.READY
             self._socketio.start_background_task(self._watch_fs_events, queue)
-
-            if self._watch_mode == "autorun":
-                self._socketio.start_background_task(
-                    self._run_test, nodeid.EMPTY_NODEID
-                )
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """
