@@ -1,6 +1,4 @@
 """Classes to help interacting with pytest nodeids."""
-from __future__ import annotations
-
 import collections
 import enum
 import os
@@ -31,7 +29,7 @@ class Nodeid:
         self._fragments = fragments
 
     @classmethod
-    def from_string(cls, raw_nodeid: str) -> Nodeid:
+    def from_string(cls, raw_nodeid: str) -> "Nodeid":
         if not raw_nodeid:
             return cls("", [])
 
@@ -55,7 +53,7 @@ class Nodeid:
         return cls(raw_nodeid, fragments)
 
     @classmethod
-    def from_fragments(cls, fragments: List[NodeidFragment]) -> Nodeid:
+    def from_fragments(cls, fragments: List[NodeidFragment]) -> "Nodeid":
         if not fragments:
             return cls("", [])
 
@@ -80,7 +78,7 @@ class Nodeid:
         return cls(raw_nodeid, fragments)
 
     @classmethod
-    def from_path(cls, path: str, root_dir: str) -> Nodeid:
+    def from_path(cls, path: str, root_dir: str) -> "Nodeid":
         if not path.startswith(root_dir):
             raise ValueError(
                 f"path {path} does not appear to be within root dir {root_dir}"
@@ -111,12 +109,12 @@ class Nodeid:
     def fspath(self):
         return self._raw_nodeid.replace("/", os.sep)
 
-    def append(self, fragment: NodeidFragment) -> Nodeid:
+    def append(self, fragment: NodeidFragment) -> "Nodeid":
         """Returns a new nodeid with the new fragment appended."""
         return Nodeid.from_fragments(self._fragments + [fragment])
 
     @property
-    def parent(self) -> Nodeid:
+    def parent(self) -> "Nodeid":
         """Returns the parent nodeid."""
         if not self._fragments:
             raise RuntimeError("empty nodeid has no parents, like batman")

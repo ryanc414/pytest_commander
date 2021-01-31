@@ -4,7 +4,6 @@ functions in their respective hierarchy. Used to render the test structure
 in the UI and to update with test results as they are available.
 """
 
-from __future__ import annotations
 import abc
 import enum
 import logging
@@ -141,7 +140,7 @@ class BranchNode(Node):
         for leaf in self.child_leaves.values():
             yield leaf
 
-    def merge(self, other: BranchNode, merge_base: nodeid.Nodeid):
+    def merge(self, other: "BranchNode", merge_base: nodeid.Nodeid):
         """
         Merge another tree into this one. In case of collisions, the other
         tree's child nodes take precedence.
