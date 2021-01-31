@@ -20,7 +20,7 @@
     "@types/reactstrap": "^8.4.2",
     "@types/socket.io-client": "^1.4.32",
     "aphrodite": "^2.4.0",
-    "axios": "^0.19.2",
+    "axios": "^0.21.1",
     "bootstrap": "^4.4.1",
     "lodash": "^4.17.19",
     "react": "^16.13.0",
@@ -28,7 +28,7 @@
     "react-router-dom": "^5.1.2",
     "react-scripts": "^4.0.0",
     "reactstrap": "^8.4.1",
-    "socket.io-client": "^2.3.0",
+    "socket.io-client": "^3.1.0",
     "typescript": "^3.7.5"
   },
   "scripts": {
