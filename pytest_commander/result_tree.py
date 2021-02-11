@@ -9,7 +9,7 @@ import enum
 import logging
 import os
 import textwrap
-from typing import List, Tuple, Dict, Generator, Iterator, Optional, Any, cast
+from typing import List, Tuple, Dict, Generator, Iterator, Optional, Any, cast, Union
 
 import marshmallow
 from marshmallow import fields
@@ -212,7 +212,7 @@ class LeafNode(Node):
         self._nodeid = leaf_nodeid
         self._status = TestState.INIT
         self._fspath = os.path.join(root_dir, leaf_nodeid.fspath)
-        self.longrepr = None
+        self.longrepr: Optional[str] = None
 
     def __eq__(self, other: object) -> bool:
         """Compare two LeafNodes for equality."""

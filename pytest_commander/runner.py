@@ -152,7 +152,11 @@ class PyTestRunner:
         result_node = self._node_index[nodeid.Nodeid.from_string(report.nodeid)]
         assert isinstance(result_node, result_tree.LeafNode)
         result_node.status = result_tree.TestState(report.outcome)
-        result_node.longrepr = report.longrepr
+
+        if report.longrepr is None:
+            result_node.longrepr = None
+        else:
+            result_node.longrepr = str(report.longrepr)
 
     def _get_parent_node(
         self, child_nodeid: nodeid.Nodeid
