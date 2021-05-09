@@ -62,7 +62,7 @@ class TestRunner extends React.Component<TestRunnerProps, TestRunnerState> {
     const socket = io();
     this.setState({ loading: true, socket: socket }, () => {
       socket.on('update', this.handleUpdate);
-      this.getResultTree();
+      this.getResultTree(100);
     });
   }
 
@@ -71,12 +71,12 @@ class TestRunner extends React.Component<TestRunnerProps, TestRunnerState> {
    * this component mounts, then further updates are handled by the websocket
    * connection.
    */
-  getResultTree() {
+  getResultTree(backoff: number) {
     axios.get("/api/v1/result-tree").then(response => {
       this.setState({ resultTree: response.data, loading: false });
     }).catch((reason: any) => {
       console.log("API error: " + reason);
-      setTimeout(() => this.getResultTree(), 100);
+      setTimeout(() => this.getResultTree(2*backoff), backoff);
     });
   }
 
