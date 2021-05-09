@@ -29,7 +29,7 @@ def main():
             "flask>=1.1.2, <2.0.0",
             "flask_socketio>=5.0.1, <6.0.0",
             "eventlet>=0.31.0, <1.0.0",
-            "watchdog>=0.10.4, <1.0.0",
+            "watchdog>=2.1.0, <3.0.0",
         ],
         include_package_data=True,
         entry_points={

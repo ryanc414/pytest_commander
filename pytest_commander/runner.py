@@ -40,7 +40,7 @@ class PyTestRunner:
         socketio: flask_socketio.SocketIO,
         watch_mode: str,
     ):
-        self._directory = directory
+        self._directory = os.path.abspath(directory)
         self.result_tree = _init_result_tree(directory, watch_mode)
         self._socketio = socketio
         self._branch_schema = result_tree.BranchNodeSchema()
