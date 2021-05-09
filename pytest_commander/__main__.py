@@ -7,7 +7,6 @@ import webbrowser
 import time
 
 import eventlet  # type: ignore
-import requests
 from pytest_commander import api
 
 LOGGER = logging.getLogger(__name__)
