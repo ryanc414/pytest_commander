@@ -57,7 +57,8 @@ class PyTestRunner:
         if self._watch_mode != "disabled":
             queue = multiprocessing.Queue()
             self._watchdog_proc = multiprocessing.Process(
-                target=watcher.watch_filesystem, args=(self._directory, queue)
+                target=watcher.watch_filesystem,
+                args=(self._directory, queue, LOGGER.getEffectiveLevel()),
             )
             self._watchdog_proc.start()
             assert queue.get() == watcher.READY

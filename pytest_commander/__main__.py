@@ -21,7 +21,7 @@ def main():
     if args.port == 0:
         sys.exit("Binding to port 0 is not currently supported.")
 
-    log_level = logging.DEBUG if args.debug else logging.CRITICAL
+    log_level = logging.DEBUG if args.debug else logging.WARNING
     logging.basicConfig(level=log_level)
 
     app, socketio, test_runner = api.build_app(args.directory, args.watch)
@@ -34,7 +34,7 @@ def main():
         socketio.start_background_task(open_webbrowser, address)
 
     with test_runner:
-        socketio.run(app, host=args.host, port=args.port, debug=args.debug)
+        socketio.run(app, host=args.host, port=args.port)
 
 
 def display_host(host: str) -> str:
