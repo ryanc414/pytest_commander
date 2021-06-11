@@ -51,7 +51,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "directory",
         nargs="?",
-        default=".",
+        default=os.getcwd(),
         help=f"Directory to find PyTest test modules, defaults to cwd ({os.getcwd()})",
     )
     parser.add_argument(

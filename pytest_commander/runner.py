@@ -41,7 +41,7 @@ class PyTestRunner:
         watch_mode: str,
     ):
         self._directory = os.path.abspath(directory)
-        self.result_tree = _init_result_tree(directory, watch_mode)
+        self.result_tree = _init_result_tree(self._directory, watch_mode)
         self._socketio = socketio
         self._branch_schema = result_tree.BranchNodeSchema()
         self._leaf_schema = result_tree.LeafNodeSchema()
