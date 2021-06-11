@@ -1,6 +1,6 @@
 {
   "name": "pytest_commander",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "private": true,
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^1.2.35",
