@@ -2,11 +2,11 @@
 import argparse
 import logging
 import os
+import subprocess
 import sys
 import webbrowser
-import time
+from typing import Optional
 
-import eventlet  # type: ignore
 from pytest_commander import api
 
 LOGGER = logging.getLogger(__name__)
@@ -31,7 +31,7 @@ def main():
         # According to the eventlet concurrency model, this will not be started
         # as a background task until the socketio server has started and
         # co-operatively yields control.
-        socketio.start_background_task(open_webbrowser, address)
+        socketio.start_background_task(open_webbrowser, address, args.browser)
 
     with test_runner:
         socketio.run(app, host=args.host, port=args.port)
@@ -90,13 +90,24 @@ def parse_args() -> argparse.Namespace:
             "select 'disabled'."
         ),
     )
+    parser.add_argument(
+        "-b",
+        "--browser",
+        help=(
+            "Specify web browser executable to open the UI in. If not specified, "
+            "the system's default browser will be used."
+        ),
+    )
 
     return parser.parse_args()
 
 
-def open_webbrowser(address: str):
+def open_webbrowser(address: str, browser: Optional[str]):
     LOGGER.critical("View in your browser at %s", address)
-    webbrowser.open(address)
+    if browser:
+        subprocess.Popen([browser, address])
+    else:
+        webbrowser.open(address)
 
 
 if __name__ == "__main__":
