@@ -70,6 +70,19 @@ pip install .
 pytest_commander /path/to/your/tests
 ```
 
+PyTest Configuration
+====================
+
+Configuration for PyTest such as extra command-line arguments may be specified
+by adding a pytest.ini file in the same directory. See
+https://docs.pytest.org/en/latest/reference/customize.html#pytest-ini for more
+details.
+
+Note that there is a known issue when using pytest_commander along with the
+xdist plugin, used to parallelise tests among multiple processes. You will
+have to remove xdist config options from your pytest.ini in order to use
+pytest-commander.
+
 Renaming
 ========
 
