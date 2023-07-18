@@ -23,13 +23,13 @@ def main():
         ],
         python_requires=">=3.6",
         install_requires=[
-            "pytest>=6.2.4, <7.0.0",
+            "pytest>=7.0.0, <80.0",
             "marshmallow>=3.11.1, <4.0.0",
             "marshmallow-enum>=1.5.1, <2.0.0",
             "flask>=2.3.2, <3.0.0",
             "flask_socketio>=5.0.1, <6.0.0",
             "eventlet>=0.31.0, <1.0.0",
-            "watchdog>=2.1.0, <3.0.0",
+            "watchdog>=3.0.0, <4.0.0",
         ],
         include_package_data=True,
         entry_points={
