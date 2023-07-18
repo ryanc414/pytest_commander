@@ -63,8 +63,8 @@ def parse_args() -> argparse.Namespace:
         "-p",
         "--port",
         type=int,
-        default=5000,
-        help="Port number to bind to, defaults to 5000",
+        default=8000,
+        help="Port number to bind to, defaults to 8000",
     )
     parser.add_argument(
         "-d",

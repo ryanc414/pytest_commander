@@ -32,6 +32,7 @@ def build_app(
 
     @app.route("/")
     def index():
+        LOGGER.debug("Sending index file: %s", index_file)
         return flask.send_file(index_file)
 
     @app.route("/<path:path>")
